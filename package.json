@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/miguelalarcos/lince/issues"
   },
-  "homepage": "https://github.com/miguelalarcos/lince#readme"
+  "homepage": "https://github.com/miguelalarcos/lince#readme",
+  "dependencies": {
+    "mobx": "^2.6.2"
+  }
 }
