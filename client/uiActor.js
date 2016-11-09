@@ -10,18 +10,23 @@ class uiActor{
 
 export const ui = new uiActor()
 
+export const LinkMixin = (self) => {
+    return {
+        link: (rv, uidest) =>{
+            self[uidest] = rv.get()
+            self.update()
+            mobx.observe(rv, (v) => {
+                self[uidest] = v
+                self.update()
+            })
+        }
+    }
+}
+
 export const UImixin = (self) => {
   return {
     store: ui.store,
     dispatcher: ui.dispatcher,
-    link: (rv, uidest) =>{
-        self[uidest] = rv.get()
-        self.update()
-        mobx.observe(rv, (v) => {
-            self[uidest] = v
-            self.update()
-        })
-    },
     subscribeDoc: (collection, rv) => {
       let id = rv.get()
       self.doc = ui.store.collections[collection].get(id)
