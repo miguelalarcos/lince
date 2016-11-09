@@ -1,14 +1,14 @@
-import mobx, {asMap} from 'mobx'
+import {asMap, observable} from 'mobx'
 import _ from 'lodash'
 import {Actor} from './Actor.js'
-import {T} from './TicketActor.js'
+import {T} from './Ticket.js'
 
 class WebSocketActor extends Actor{
 
     constructor(){
         super()
         this.on('input', ()=>this.onInput())
-        this.connected = mobx.Observable(false)
+        this.connected = observable(false)
         this.mbx = null
         this.aa = null
         this.offline = observable(asMap())
@@ -20,10 +20,10 @@ class WebSocketActor extends Actor{
 
     connect(){
         let ws = this.ws = new WebSocket('ws://' + document.location.hostname + ':8000')
-        ws.on('open', (evt) => this.onOpen(evt))
-        ws.on('error', (evt) => this.onError(evt))
-        ws.on('message', (msg) => this.onMessage(msg))
-        ws.on('close', (evt) => this.onClose(evt))
+        ws.onopen = (evt) => this.onOpen(evt)
+        ws.onerror = (evt) => this.onError(evt)
+        ws.onmessage = (msg) => this.onMessage(msg)
+        ws.onclose = (evt) => this.onClose(evt)
     }
 
     onError(evt){

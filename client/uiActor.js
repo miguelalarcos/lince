@@ -36,9 +36,9 @@ export const UImixin = (self) => {
       })
     },
     subscribePredicate: (id, predicate, args) => {
-      let ticket = self.mapIdTicket[id]
-      if(ticket) {
-          ui.store.unsubscribe(ticket)
+      let ticket_ = self.mapIdTicket[id]
+      if(ticket_) {
+          ui.store.unsubscribe(ticket_)
       }
       let {ticket, collection} = ui.store.subscribe(predicate, args)
       self.mapIdTicket[id] = ticket

@@ -1,11 +1,11 @@
-import {ws} from './wsActor.js'
-import {mbx} from './mobxActor.js'
-import {ui} from './uiActor.js'
-import {aa} from './ActionActor.js'
+import {ws} from './client/webSocketActor'
+import {store} from './client/collectionStoreActor'
+import {ui} from './client/uiActor.js'
+import {dispatcher} from './client/dispatcherActor.js'
 
-ws.mbx = mbx
-ws.aa = aa
-ui.aa = aa
-ui.mbx = mbx
-aa.ws = ws
-mbx.ws = ws
+ws.store = store
+ws.dispatcher = dispatcher
+ui.dispatcher = dispatcher
+ui.store = store
+dispatcher.ws = ws
+store.ws = ws

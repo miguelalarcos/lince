@@ -1,3 +1,5 @@
+r = require('rethinkdb')
+
 class Controller{
     constructor(ws, conn){
         this.ws = ws

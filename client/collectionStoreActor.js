@@ -1,5 +1,5 @@
 import {observable, asMap, asReference} from 'mobx'
-import {T} from './TicketActor.js'
+import {T} from './Ticket.js'
 import _ from 'lodash'
 
 class collectionStoreActor{
