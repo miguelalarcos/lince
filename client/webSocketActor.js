@@ -7,7 +7,7 @@ class WebSocketActor extends Actor{
 
     constructor(){
         super()
-        this.on('input', ()=>this.onInput())
+        //this.on('input', ()=>this.onInput())
         this.connected = observable(false)
         this.mbx = null
         this.aa = null
@@ -28,18 +28,16 @@ class WebSocketActor extends Actor{
 
     onError(evt){
         console.log(evt)
-        //setTimeout(()=>this.connect()
-        //,5000)
     }
 
     onClose(evt){
         console.log(evt)
         this.connected.set(false)
-        setTimeout(()=>this.connect()
-            ,5000)
+        //setTimeout(()=>this.connect()
+        //    ,5000)
     }
 
-    onInput(){
+    /*onInput(){
         //if(this.connected.get()){
         while(this.input.length > 0){
             let input = this.input[0]
@@ -48,6 +46,7 @@ class WebSocketActor extends Actor{
         }
         //}
     }
+    */
 
     onMessage(msg){
         let obj = JSON.parse(msg)

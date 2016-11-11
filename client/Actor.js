@@ -5,17 +5,39 @@ export class Actor extends EventEmitter{
     constructor(){
         super()
         this.input = []
+        this.on('input', ()=>this.onInput())
     }
 
-    tell(input){
+    tell(...input){
+        console.log('tell', input)
         this.input.push(input)
-        this.emmit('input')
+        this.emit('input')
     }
 
-    ask(input){
+    ask(...input){
+        console.log('ask', input)
         let deferred = Q.defer()
-        this.input.push(deferred, input)
-        this.emmit('input')
+        input.splice(1,0,deferred)
+        this.input.push(input)
+        this.emit('input')
         return deferred.promise
     }
+
+    onInput(){
+        console.log('on input')
+        while(this.input.length > 0){
+            let input = this.input[0]
+            this.handle(input)
+            this.input.shift()
+        }
+    }
+
+    handle(input) {
+        console.log('handle', input)
+        let method = input[0]
+        let args = input.slice(1)
+        console.log(method, args)
+        this[method](...args)
+    }
+
 }

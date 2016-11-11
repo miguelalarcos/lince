@@ -13,7 +13,7 @@ class DispatcherActor extends Actor{
     rpc(method, ...args){
         console.log('action actor rpc', method, args)
         let t = T.getTicket()
-        rv = args.slice(-1)[0]
+        let rv = args.slice(-1)[0]
         if(rv.constructor.name == 'ObservableValue'){
             rv = args.pop()
             this.results[t] = rv

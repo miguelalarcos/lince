@@ -27,6 +27,7 @@ export const UImixin = (self) => {
   return {
     store: ui.store,
     dispatcher: ui.dispatcher,
+    mapIdTicket: {},
     subscribeDoc: (collection, rv) => {
       let id = rv.get()
       self.doc = ui.store.collections[collection].get(id)
@@ -45,7 +46,7 @@ export const UImixin = (self) => {
       if(ticket_) {
           ui.store.tell('unsubscribe', ticket_)
       }
-      ui.store.ask('subscribe', predicate, args).then(({ticket, collection})=>{
+      ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection})=>{
           self.mapIdTicket[id] = ticket
           if(ui.store.metadata[ticket] == 'ready'){
               self.handle(ticket, collection)
@@ -63,7 +64,7 @@ export const UImixin = (self) => {
     },
     handle: (ticket, collection) => {
       self.items = collection.values().filter((x)=> _.includes([...x.tickets], ticket))
-        self.update()
+      self.update()
       collection.observe((change) => {
         let tickets = change.newValue && change.newValue.tickets || change.oldValue.tickets
         if(_.includes([...tickets], ticket)){

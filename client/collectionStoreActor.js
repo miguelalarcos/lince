@@ -3,8 +3,9 @@ import {T} from './Ticket.js'
 import _ from 'lodash'
 import {Actor} from './Actor.js'
 
-class collectionStoreActor{
+class collectionStoreActor extends Actor{
     constructor(){
+        super()
         this.ws = null
         this.collections = {}
         this.metadata = observable(asMap())
@@ -36,7 +37,8 @@ class collectionStoreActor{
     }
 
     subscribe(promise, id, predicate, args=[]){
-        let ticket = this.getTicket(predicate, args)
+        console.log('subscribe en store', promise, id, predicate, args)
+        let ticket = T.getTicket(predicate, args)
         this.activeTickets.add(ticket)
         let name = this.registered[predicate]
         if(this.subsId[id]) {
