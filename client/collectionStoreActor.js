@@ -1,6 +1,7 @@
 import {observable, asMap, asReference} from 'mobx'
 import {T} from './Ticket.js'
 import _ from 'lodash'
+import {Actor} from './Actor.js'
 
 class collectionStoreActor{
     constructor(){
@@ -34,7 +35,7 @@ class collectionStoreActor{
         }
     }
 
-    subscribe(id, predicate, args=[]){
+    subscribe(promise, id, predicate, args=[]){
         let ticket = this.getTicket(predicate, args)
         this.activeTickets.add(ticket)
         let name = this.registered[predicate]
@@ -45,7 +46,7 @@ class collectionStoreActor{
         this.subsId[id] = ticket
         this.ws.tell('subscribe', predicate, args, ticket)
         let collection = this.collections[name]
-        return {ticket, collection}
+        promise.resolve({ticket, collection})
     }
 
     newCollection(name){

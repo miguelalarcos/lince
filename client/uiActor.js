@@ -12,11 +12,11 @@ export const ui = new uiActor()
 
 export const LinkMixin = (self) => {
     return {
-        link: (rv, uidest) =>{
-            self[uidest] = rv.get()
+        link: (rv, uidest, trans=(x)=>x) =>{
+            self[uidest] = trans(rv.get())
             self.update()
             mobx.observe(rv, (v) => {
-                self[uidest] = v
+                self[uidest] = trans(v)
                 self.update()
             })
         }
@@ -43,22 +43,23 @@ export const UImixin = (self) => {
     subscribePredicate: (id, predicate, args) => {
       let ticket_ = self.mapIdTicket[id]
       if(ticket_) {
-          ui.store.unsubscribe(ticket_)
+          ui.store.tell('unsubscribe', ticket_)
       }
-      let {ticket, collection} = ui.store.subscribe(predicate, args)
-      self.mapIdTicket[id] = ticket
-      if(ui.store.metadata[ticket] == 'ready'){
-        self.handle(ticket, collection)
-      }
-      else{
-        const dispose = ui.store.metadata.observe((change) => {
-          // if(change.newValue == 'initializing'){self.items = []} else
-          if(change.name == ticket && change.newValue == 'ready'){
-            self.handle(ticket, collection)
-            dispose()
+      ui.store.ask('subscribe', predicate, args).then(({ticket, collection})=>{
+          self.mapIdTicket[id] = ticket
+          if(ui.store.metadata[ticket] == 'ready'){
+              self.handle(ticket, collection)
           }
-        })
-      }
+          else{
+              const dispose = ui.store.metadata.observe((change) => {
+                  // if(change.newValue == 'initializing'){self.items = []} else
+                  if(change.name == ticket && change.newValue == 'ready'){
+                      self.handle(ticket, collection)
+                      dispose()
+                  }
+              })
+          }
+      })
     },
     handle: (ticket, collection) => {
       self.items = collection.values().filter((x)=> _.includes([...x.tickets], ticket))

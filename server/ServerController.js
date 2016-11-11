@@ -84,6 +84,10 @@ class Controller{
         r.table(collection).get(id).delete().run(this.conn).then((doc)=>callback(doc.deleted))
     }
 
+    get(collection, id, callback){
+        r.table(collection).get(id).run(this.conn).then((doc)=>callback(doc))
+    }
+
     close(){
         for(let c of Object.values(this.cursors)){
             c.close()
