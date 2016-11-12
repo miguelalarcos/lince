@@ -10,7 +10,7 @@ class Controller{
         console.log(msg)
         msg = JSON.parse(msg)
         if(msg.type == 'subscribe'){
-            this.handle_subscribe(msg.predicate, msg.args, msg.ticket)
+            this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket)
         }else if(msg.type == 'unsubscribe'){
             this.handle_unsubscribe(msg.ticket)
         }
@@ -42,6 +42,7 @@ class Controller{
             cursor.each((err, data)=> {
                     if (data.state) {
                         data = {type: data.state, ticket: ticket}
+                        console.log('feed', data)
                         this.ws.send(JSON.stringify(data))
                     } else {
                         let type
@@ -64,6 +65,7 @@ class Controller{
                         ret.type = type
                         ret.data = data
                         ret.predicate = predicate
+                        console.log('feed', ret)
                         this.ws.send(JSON.stringify(ret))
                     }
                 }

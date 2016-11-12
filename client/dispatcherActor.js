@@ -19,16 +19,16 @@ class DispatcherActor extends Actor{
             this.results[t] = rv
         }
         let doc = {}
-        doc.type = method
-        doc.args = args
-        doc.ticket = t
-        this.ws.tell('rpc', doc)
+        //doc.type = method
+        //doc.args = args
+        //doc.ticket = t
+        this.ws.tell(method, args, t)
         //this.promises[t] =
     }
 
     notify(msg){
         console.log('Action actor', msg)
-        rv = this.results[msg.ticket]
+        let rv = this.results[msg.ticket]
         if(rv) {
             rv.set(msg.value)
             delete this.results[msg.ticket]

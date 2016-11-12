@@ -7,10 +7,10 @@ class WebSocketActor extends Actor{
 
     constructor(){
         super()
-        //this.on('input', ()=>this.onInput())
+        this.on('ready', ()=>this.onInput())
         this.connected = observable(false)
-        this.mbx = null
-        this.aa = null
+        this.storage = null
+        this.dispatcher = null
         this.offline = observable(asMap())
         this.statePredicates = {}
         this.ws = null
@@ -22,7 +22,7 @@ class WebSocketActor extends Actor{
         let ws = this.ws = new WebSocket('ws://' + document.location.hostname + ':8000')
         ws.onopen = (evt) => this.onOpen(evt)
         ws.onerror = (evt) => this.onError(evt)
-        ws.onmessage = (msg) => this.onMessage(msg)
+        ws.onmessage = (evt) => this.onMessage(evt.data)
         ws.onclose = (evt) => this.onClose(evt)
     }
 
@@ -37,29 +37,30 @@ class WebSocketActor extends Actor{
         //    ,5000)
     }
 
-    /*onInput(){
-        //if(this.connected.get()){
-        while(this.input.length > 0){
-            let input = this.input[0]
-            this.handle(input)
-            this.input.shift()
+    onInput(){
+        if(this.connected.get()){
+            while(this.input.length > 0){
+                let input = this.input[0]
+                this.handle(input)
+                this.input.shift()
+            }
         }
-        //}
     }
-    */
 
     onMessage(msg){
+        console.log('onmessage', msg)
         let obj = JSON.parse(msg)
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
-            this.mbx.notify(obj)
+            this.store.notify(obj)
         }
         else{
-            this.aa.notify(obj)
+            this.dispatcher.notify(obj)
         }
     }
 
     onOpen(){
         this.connected.set(true)
+        this.emit('ready')
         /*
          let keys = _.keys(this.offline)
          for(let k of keys){
@@ -80,9 +81,15 @@ class WebSocketActor extends Actor{
     }
 
     handle(input){
-        let {method, args} = input
-        let ticket = T.getTicket()
+        //let {method, args} = input
+        console.log('handle', input)
+        let method = input[0]
+        let args = input[1]
+        console.log('==>args:', args)
+        let ticket = input.splice(-1)[0]
+        //let ticket = T.getTicket()
 
+        /*
         if(!this.connected.get()){
             if(method == 'add'){
                 let doc = args[0]
@@ -96,8 +103,12 @@ class WebSocketActor extends Actor{
                 delete this.offline.delete(id)
             }
         }else{
+            console.log('ws send', {type: method, args: args, ticket: ticket})
             this.send({type: method, args: args, ticket: ticket})
         }
+        */
+        console.log('ws send', {type: method, args: args, ticket: ticket})
+        this.send({type: method, args: args, ticket: ticket})
 
     }
 

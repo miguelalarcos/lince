@@ -36,7 +36,7 @@ class collectionStoreActor extends Actor{
         }
     }
 
-    subscribe(promise, id, predicate, args=[]){
+    subscribe(promise, id, predicate, ...args){
         console.log('subscribe en store', promise, id, predicate, args)
         let ticket = T.getTicket(predicate, args)
         this.activeTickets.add(ticket)
@@ -46,7 +46,8 @@ class collectionStoreActor extends Actor{
             this.activeTickets.delete(this.subsId[id])
         }
         this.subsId[id] = ticket
-        this.ws.tell('subscribe', predicate, args, ticket)
+        args.unshift(predicate)
+        this.ws.tell('subscribe', args, ticket)
         let collection = this.collections[name]
         promise.resolve({ticket, collection})
     }
