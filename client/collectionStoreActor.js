@@ -109,6 +109,7 @@ class collectionStoreActor extends Actor{
     }
 
     update(collection, doc, t){
+        doc = doc.newVal
         doc.tickets = this.collections[collection].get(doc.id).tickets
         doc.tickets.add(t)
         this.collections[collection].set(doc.id, doc)
