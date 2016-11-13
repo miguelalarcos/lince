@@ -13,6 +13,7 @@ export const ui = new uiActor()
 export const LinkMixin = (self) => {
     return {
         link: (rv, uidest, trans=(x)=>x) =>{
+            console.log('link', uidest, rv)
             self[uidest] = trans(rv.get())
             self.update()
             mobx.observe(rv, (v) => {
