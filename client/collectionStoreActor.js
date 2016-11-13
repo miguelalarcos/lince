@@ -39,22 +39,26 @@ class collectionStoreActor extends Actor{
     subscribe(promise, id, predicate, ...args){
         console.log('subscribe en store', promise, id, predicate, args)
         let ticket = T.getTicket(predicate, args)
+        if(!this.collections[ticket]) {
+            this.collections[ticket] = observable(asMap([], asReference))
+        }
         this.activeTickets.add(ticket)
-        let name = this.registered[predicate]
+        //let name = this.registered[predicate]
+        let collection = this.collections[ticket]
+        promise.resolve({ticket, collection})
         if(this.subsId[id]) {
+            delete this.collections[this.subsId[id]]
             this.ws.tell('unsubscribe', this.subsId[id])
             this.activeTickets.delete(this.subsId[id])
         }
         this.subsId[id] = ticket
         args.unshift(predicate)
         this.ws.tell('subscribe', args, ticket)
-        let collection = this.collections[name]
-        promise.resolve({ticket, collection})
     }
 
-    newCollection(name){
-        this.collections[name] = observable(asMap([], asReference))
-    }
+    //newCollection(name){
+    //    this.collections[name] = observable(asMap([], asReference))
+    //}
 
     register(predicate, collection){
         this.registered[predicate] = collection
@@ -74,8 +78,9 @@ class collectionStoreActor extends Actor{
     }
 
     notify(msg){
-        console.log('notify', msg)
+        console.log('notify', msg, this.activeTickets)
         if(!_.includes([...this.activeTickets], msg.ticket)){
+            console.log('return')
             return
         }
         switch(msg.type){
@@ -84,48 +89,54 @@ class collectionStoreActor extends Actor{
                 break
             case 'ready':
                 this.metadata.set(''+msg.ticket, 'ready')
+                console.log('hacemos set ready', msg.ticket, this.metadata.get(msg.ticket))
                 break
             case 'add':
-                this.add(this.getCollection(msg.predicate), msg.data, msg.ticket)
+                this.add(msg.data, msg.ticket)
                 break
             case 'update':
-                this.update(this.getCollection(msg.predicate), msg.data, msg.ticket)
+                this.update(msg.data, msg.ticket)
                 break
             case 'delete':
-                this.delete(this.getCollection(msg.predicate), msg.data.id, msg.ticket)
+                this.delete(msg.data.id, msg.ticket)
                 break
         }
     }
 
-    add(collection, doc, t){
-        console.log('insert', collection, doc, t)
+    add(doc, t){
         doc = doc.newVal
-        let aux = this.collections[collection].get(':'+t) || this.collections[collection].get(doc.id)
-        let tickets = aux && aux.tickets || new Set()
-        tickets.add(t)
-        doc.tickets = tickets
-        this.collections[collection].set(doc.id, doc)
-        this.collections[collection].delete(':'+t)
+        console.log('ADD', doc, t)
+        let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
+        //let tickets = aux && aux.tickets || new Set()
+        //tickets.add(t)
+        //doc.tickets = tickets
+        this.collections[t].set(doc.id, doc)
+        this.collections[t].delete(':'+t)
     }
 
-    update(collection, doc, t){
+    update(doc, t){
         doc = doc.newVal
-        doc.tickets = this.collections[collection].get(doc.id).tickets
-        doc.tickets.add(t)
-        this.collections[collection].set(doc.id, doc)
+        console.log('UPDATE', doc, t)
+        //doc.tickets = this.collections[t].get(doc.id).tickets
+        //doc.tickets.add(t)
+        this.collections[t].set(doc.id, doc)
     }
 
-    delete(collection, id, t){
-        let doc = this.collections[collection].get(id)
-        let tickets = new Set([...doc.tickets])
-
-        tickets.delete(t)
-        if(tickets.size == 0) {
-            this.collections[collection].delete(id)
-        }else{
-            doc.tickets = tickets
-            this.collections[collection].set(doc.id, doc)
-        }
+    delete(id, t){
+        let doc = this.collections[t].get(id)
+        console.log('DELETE', doc, t)
+        //let tickets = new Set([...doc.tickets])
+        //tickets.delete(t)
+        //if(tickets.size == 0) {
+        this.collections[t].delete(id)
+        //}else{
+        //    console.log('tickets antes del delete', [...doc.tickets])
+        //    doc = Object.assign({}, doc)
+        //    doc.tickets = tickets
+        //    console.log('tickets despues del delete', [...doc.tickets])
+        //    console.log('delete con update')
+        //    this.collections[collection].set(id, doc)
+        //}
     }
 
 }

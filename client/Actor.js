@@ -36,7 +36,7 @@ export class Actor extends EventEmitter{
         console.log('handle', input)
         let method = input[0]
         let args = input.slice(1)
-        console.log(method, args)
+        console.log(this, method, args)
         this[method](...args)
     }
 

@@ -1,10 +1,12 @@
 r = require('rethinkdb')
+Q = require('q')
 
 class Controller{
     constructor(ws, conn){
         this.ws = ws
         this.conn = conn
         this.cursors = {}
+        this.promises = {}
     }
     notify(msg){
         console.log(msg)
@@ -28,17 +30,22 @@ class Controller{
     }
 
     handle_unsubscribe(ticket){
-        this.cursors[ticket].close()
-        delete this.cursors[ticket]
+        this.promises[ticket].promise.then(()=> {
+            this.cursors[ticket].close()
+            delete this.cursors[ticket]
+        })
     }
 
     handle_subscribe(predicate, args, ticket){
         console.log('subscribe', predicate, args, ticket)
+        let deferred = Q.defer()
+        this.promises[ticket] = deferred
         args = args || []
         let ret = {ticket: ticket, type: 'subscribe'}
         let pred = this['subs_' + predicate](...args)
         pred.changes({includeInitial: true, includeStates: true}).run(this.conn, (err, cursor)=>{
             this.cursors[ticket] = cursor
+            this.promises[ticket].resolve()
             cursor.each((err, data)=> {
                     if (data.state) {
                         data = {type: data.state, ticket: ticket}

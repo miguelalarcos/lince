@@ -27,6 +27,7 @@ export const UImixin = (self) => {
   return {
     store: ui.store,
     dispatcher: ui.dispatcher,
+    dispose: {},
     mapIdTicket: {},
     subscribeDoc: (collection, rv) => {
       let id = rv.get()
@@ -42,16 +43,22 @@ export const UImixin = (self) => {
       })
     },
     subscribePredicate: (id, predicate, args) => {
-      let ticket_ = self.mapIdTicket[id]
-      if(ticket_) {
-          ui.store.tell('unsubscribe', ticket_)
+      /*
+      let t = self.mapIdTicket[id]
+      if(t){
+          self.dispose[t]()
+          delete self.dispose[t]
+          console.log('dispose de ticket', t)
       }
+      */
       ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection})=>{
           self.mapIdTicket[id] = ticket
-          if(ui.store.metadata[ticket] == 'ready'){
+          console.log('es ready?', ticket, ui.store.metadata.get(ticket))
+          if(ui.store.metadata.get(ticket) == 'ready'){
               self.handle(ticket, collection)
           }
           else{
+              console.log('observamos ready', ticket)
               const dispose = ui.store.metadata.observe((change) => {
                   // if(change.newValue == 'initializing'){self.items = []} else
                   if(change.name == ticket && change.newValue == 'ready'){
@@ -63,14 +70,33 @@ export const UImixin = (self) => {
       })
     },
     handle: (ticket, collection) => {
-      self.items = collection.values().filter((x)=> _.includes([...x.tickets], ticket))
+      console.log('ui actor handle', ticket)
+      self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))
       self.update()
+      //self.dispose[ticket] =
       collection.observe((change) => {
-        let tickets = change.newValue && change.newValue.tickets || change.oldValue.tickets
-        if(_.includes([...tickets], ticket)){
-            self.updateItems(change)
-            self.update()
+        console.log('change al observar la collection', change)
+        /*
+        let tickets
+        if(change.newValue && !change.oldValue){
+            console.log('add')
+            tickets = change.newValue.tickets
         }
+        else if(!change.newValue && change.oldValue){
+            console.log('delete')
+            tickets = change.oldValue.tickets
+        }
+        else{
+            console.log('update/delete')
+            tickets = new Set([...change.newValue.tickets, ...change.oldValue.tickets])
+        }
+        */
+        //console.log('handle:', tickets, ticket)
+        //if(_.includes([...tickets], ticket)){
+        console.log('vamos a llamar a updateitems con change', change)
+        self.updateItems(change)
+        self.update()
+        //}
       })
     },
     updateItems(change){
@@ -80,7 +106,6 @@ export const UImixin = (self) => {
                 doc = change.newValue
                 pos = self.index(doc)
                 self.items.splice(pos, 0, doc)
-                // self.update() ?
                 break;
             case 'update':
                 doc = change.newValue
@@ -88,13 +113,11 @@ export const UImixin = (self) => {
                 self.items.splice(pos, 1)
                 pos = self.index(doc)
                 self.items.splice(pos, 0, doc)
-                self.update()
                 break;
             case 'delete':
                 doc = change.oldValue
                 pos = self.actualIndex(doc)
                 self.items.splice(pos, 1)
-                // self.update() ?
                 break;
         }
 
