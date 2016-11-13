@@ -4,6 +4,7 @@ import Q from 'q'
 export class Actor extends EventEmitter{
     constructor(){
         super()
+        this.inProcess = false
         this.input = []
         this.on('input', ()=>this.onInput())
     }
@@ -25,11 +26,17 @@ export class Actor extends EventEmitter{
 
     onInput(){
         console.log('on input')
+        if(this.inProcess || this.input.length == 0){
+            return
+        }
         while(this.input.length > 0){
+            this.inProcess = true
             let input = this.input[0]
             this.handle(input)
             this.input.shift()
         }
+        this.inProcess = false
+        this.emit('input')
     }
 
     handle(input) {
