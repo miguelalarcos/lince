@@ -13,12 +13,21 @@ export const ui = new uiActor()
 export const LinkMixin = (self) => {
     return {
         link: (rv, uidest, trans=(x)=>x) =>{
-            console.log('link', uidest, rv)
             self[uidest] = trans(rv.get())
             self.update()
             mobx.observe(rv, (v) => {
                 self[uidest] = trans(v)
                 self.update()
+            })
+        },
+        linkMap: (rm, name, uidest) => {
+            self[uidest] = rm.get(name)
+            self.update()
+            mobx.observe(rm, (ch) => {
+                if(ch.name == name) {
+                    self[uidest] = ch.newValue
+                    self.update()
+                }
             })
         }
     }
@@ -71,33 +80,12 @@ export const UImixin = (self) => {
       })
     },
     handle: (ticket, collection) => {
-      console.log('ui actor handle', ticket)
       self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))
       self.update()
       //self.dispose[ticket] =
       collection.observe((change) => {
-        console.log('change al observar la collection', change)
-        /*
-        let tickets
-        if(change.newValue && !change.oldValue){
-            console.log('add')
-            tickets = change.newValue.tickets
-        }
-        else if(!change.newValue && change.oldValue){
-            console.log('delete')
-            tickets = change.oldValue.tickets
-        }
-        else{
-            console.log('update/delete')
-            tickets = new Set([...change.newValue.tickets, ...change.oldValue.tickets])
-        }
-        */
-        //console.log('handle:', tickets, ticket)
-        //if(_.includes([...tickets], ticket)){
-        console.log('vamos a llamar a updateitems con change', change)
         self.updateItems(change)
         self.update()
-        //}
       })
     },
     updateItems(change){

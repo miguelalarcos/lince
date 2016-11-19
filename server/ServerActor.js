@@ -43,10 +43,12 @@ class ServerActor extends EventEmitter{
                 let server = new self.S(ws, conn)
                 ws.on('error', (ev)=>console.log(ev))
                 ws.on('message', function (msg) {
-                    server.notify(msg)
+                    //server.notify(msg)
+                    server.tell('notify', msg)
                 })
                 ws.on('close', ()=> {
-                    server.close()
+                    //server.close()
+                    server.tell('close')
                     server = null
                 })
             })
