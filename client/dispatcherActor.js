@@ -1,6 +1,6 @@
 import {T} from './Ticket.js'
 import {Actor} from './Actor.js'
-//import Q from 'q'
+import {observable, asMap} from 'mobx'
 
 class DispatcherActor extends Actor{
     constructor(){
@@ -8,32 +8,21 @@ class DispatcherActor extends Actor{
         this.results = {}
         this.ws = null
         this.promises = {}
+        this.rv = observable(asMap())
     }
 
     rpc(promise, method, ...args){
         console.log('action actor rpc', method, args)
         let t = T.getTicket()
-        /*let rv = args.slice(-1)[0]
-
-        if(rv.name.startsWith('ObservableValue')){
-            rv = args.pop()
-            this.results[t] = rv
-        }
-        */
         this.ws.tell(method, args, t)
         this.promises[t] = promise
     }
 
     notify(msg){
         console.log('Dispatcher actor notify', msg)
-        /*let rv = this.results[msg.ticket]
-        if(rv) {
-            rv.set(msg.value)
-            delete this.results[msg.ticket]
-        }
-        */
         this.promises[msg.ticket].resolve(msg.data)
         delete this.promises[msg.ticket]
+        this.rv.set('rpc', msg.data)
     }
 }
 

@@ -40,27 +40,19 @@ export const UImixin = (self) => {
     dispose: {},
     mapIdTicket: {},
     subscribeDoc: (collection, rv) => {
-      let id = rv.get()
-      self.doc = ui.store.collections[collection].get(id)
-
-      rv.observe((id)=> {
-          self.doc = ui.store.collections[collection].get(id)
-          ui.store.collections[collection].observe((change) => {
-              if (change.newValue.id == id) {
-                  self.doc = change.newValue
-              }
-          })
+      mbox.autorun(()=>{
+          self.id = rv.get()
+          self.doc = ui.store.collections[collection].get(self.id)
+          self.update()
+      })
+      ui.store.collections[collection].observe((ch)=>{
+          if(ch.newValue.id == self.id){
+              self.doc = ch.newValue
+              self.update()
+          }
       })
     },
     subscribePredicate: (id, predicate, args) => {
-      /*
-      let t = self.mapIdTicket[id]
-      if(t){
-          self.dispose[t]()
-          delete self.dispose[t]
-          console.log('dispose de ticket', t)
-      }
-      */
       ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection})=>{
           self.mapIdTicket[id] = ticket
           console.log('es ready?', ticket, ui.store.metadata.get(ticket))
