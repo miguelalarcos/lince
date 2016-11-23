@@ -1,5 +1,6 @@
 import {T} from './Ticket.js'
-import {Actor} from './Actor.js'
+// import {Actor} from './Actor.js'
+import Actor from '../lib/Actor.js'
 import {observable, asMap} from 'mobx'
 
 class DispatcherActor extends Actor{

@@ -1,4 +1,4 @@
-import _ from 'lodash'
+// import _ from 'lodash'
 import mbox from 'mobx'
 
 class uiActor{

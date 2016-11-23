@@ -1,7 +1,8 @@
 import {asMap, observable} from 'mobx'
 import _ from 'lodash'
-import {Actor} from './Actor.js'
-import {T} from './Ticket.js'
+// import {Actor} from './Actor.js'
+// import {T} from './Ticket.js'
+import Actor from '../lib/Actor.js'
 
 class WebSocketActor extends Actor{
 

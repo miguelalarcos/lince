@@ -9,8 +9,8 @@ class Controller extends Actor{
         this.conn = conn
         this.cursors = {}
     }
-    notify(msg, done){
-        console.log('notify', msg)
+    async_notify(msg, done){
+        console.log('async_notify', msg)
         msg = JSON.parse(msg)
         if(msg.type == 'subscribe'){
             this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
@@ -75,7 +75,7 @@ class Controller extends Actor{
                             ret.type = type
                             ret.data = data
                             ret.predicate = predicate
-                            //console.log('feed', ret)
+                            console.log('feed', ret)
                             this.ws.send(JSON.stringify(ret))
                         }
                     }

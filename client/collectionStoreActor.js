@@ -1,7 +1,8 @@
 import {observable, asMap, asReference} from 'mobx'
 import {T} from './Ticket.js'
 import _ from 'lodash'
-import {Actor} from './Actor.js'
+// import {Actor} from './Actor.js'
+import Actor from '../lib/Actor.js'
 
 class collectionStoreActor extends Actor{
     constructor(){
