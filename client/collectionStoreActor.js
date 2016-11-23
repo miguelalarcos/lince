@@ -37,7 +37,6 @@ class collectionStoreActor extends Actor{
     }
 
     subscribe(promise, id, predicate, ...args){
-        console.log('subscribe en store', promise, id, predicate, args)
         let ticket = T.getTicket(predicate, args)
         if(!this.collections[ticket]) {
             this.collections[ticket] = observable(asMap([], asReference))
@@ -78,9 +77,7 @@ class collectionStoreActor extends Actor{
     }
 
     notify(msg){
-        console.log('notify', msg, this.activeTickets)
         if(!_.includes([...this.activeTickets], msg.ticket)){
-            console.log('return')
             return
         }
         switch(msg.type){
@@ -89,7 +86,6 @@ class collectionStoreActor extends Actor{
                 break
             case 'ready':
                 this.metadata.set(''+msg.ticket, 'ready')
-                console.log('hacemos set ready', msg.ticket, this.metadata.get(msg.ticket))
                 break
             case 'add':
                 this.add(msg.data, msg.ticket)
@@ -105,7 +101,6 @@ class collectionStoreActor extends Actor{
 
     add(doc, t){
         doc = doc.newVal
-        console.log('ADD', doc, t)
         let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
         //let tickets = aux && aux.tickets || new Set()
         //tickets.add(t)
@@ -116,7 +111,6 @@ class collectionStoreActor extends Actor{
 
     update(doc, t){
         doc = doc.newVal
-        console.log('UPDATE', doc, t)
         //doc.tickets = this.collections[t].get(doc.id).tickets
         //doc.tickets.add(t)
         this.collections[t].set(doc.id, doc)
@@ -124,7 +118,6 @@ class collectionStoreActor extends Actor{
 
     delete(id, t){
         let doc = this.collections[t].get(id)
-        console.log('DELETE', doc, t)
         //let tickets = new Set([...doc.tickets])
         //tickets.delete(t)
         //if(tickets.size == 0) {

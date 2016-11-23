@@ -25,7 +25,6 @@ export class Actor extends EventEmitter{
     }
 
     onInput(){
-        console.log('on input')
         if(this.inProcess || this.input.length == 0){
             return
         }
@@ -40,10 +39,8 @@ export class Actor extends EventEmitter{
     }
 
     handle(input) {
-        console.log('handle', input)
         let method = input[0]
         let args = input.slice(1)
-        console.log(this, method, args)
         this[method](...args)
     }
 

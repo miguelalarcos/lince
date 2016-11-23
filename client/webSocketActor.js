@@ -82,10 +82,8 @@ class WebSocketActor extends Actor{
 
     handle(input){
         //let {method, args} = input
-        console.log('handle', input)
         let method = input[0]
         let args = input[1]
-        console.log('==>args:', args)
         let ticket = input.splice(-1)[0]
         //let ticket = T.getTicket()
 
@@ -107,7 +105,6 @@ class WebSocketActor extends Actor{
             this.send({type: method, args: args, ticket: ticket})
         }
         */
-        console.log('ws send', {type: method, args: args, ticket: ticket})
         this.send({type: method, args: args, ticket: ticket})
 
     }

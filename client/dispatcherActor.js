@@ -12,16 +12,15 @@ class DispatcherActor extends Actor{
     }
 
     rpc(promise, method, ...args){
-        console.log('action actor rpc', method, args)
         let t = T.getTicket()
         this.ws.tell(method, args, t)
         this.promises[t] = promise
     }
 
     notify(msg){
-        console.log('Dispatcher actor notify', msg)
         this.promises[msg.ticket].resolve(msg.data)
         delete this.promises[msg.ticket]
+        this.rv.set('rpc', null)
         this.rv.set('rpc', msg.data)
     }
 }

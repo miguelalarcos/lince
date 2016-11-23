@@ -55,12 +55,10 @@ export const UImixin = (self) => {
     subscribePredicate: (id, predicate, args) => {
       ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection})=>{
           self.mapIdTicket[id] = ticket
-          console.log('es ready?', ticket, ui.store.metadata.get(ticket))
           if(ui.store.metadata.get(ticket) == 'ready'){
               self.handle(ticket, collection)
           }
           else{
-              console.log('observamos ready', ticket)
               const dispose = ui.store.metadata.observe((change) => {
                   // if(change.newValue == 'initializing'){self.items = []} else
                   if(change.name == ticket && change.newValue == 'ready'){

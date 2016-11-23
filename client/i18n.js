@@ -5,7 +5,6 @@ export const i18nMixin = (self) => {
         language: observable('es'),
         i18nResource: {},
         i18nInit: () => autorun(()=>self.dispatcher.ask('rpc', 'getLanguage', self.language.get()).then((resource)=> {
-            console.log('tag autorun de language', resource)
             self.i18nResource = resource
             self.update()
         })),
