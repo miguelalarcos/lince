@@ -49,7 +49,7 @@ class WebSocketActor extends Actor{
     }
 
     onMessage(msg){
-        console.log('onmessage', msg)
+        //console.log('onmessage', msg)
         let obj = JSON.parse(msg)
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
             this.store.notify(obj)

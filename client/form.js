@@ -1,5 +1,6 @@
 import {observable, asMap, autorun} from 'mobx'
 import {ui} from './uiActor'
+import _ from 'lodash'
 
 export const FormMixin = (self) => {
     return {
@@ -15,10 +16,33 @@ export const FormMixin = (self) => {
                 self.dispatcher.ask('rpc', 'add', self.collection, self.doc).then((id)=>self.doc.set('id', id))
             }
         },
-        initForm: ()=>{
-            self.doc = observable(asMap())
-            self.doc.observe((ch)=>self.dirty=true)
+        clear: ()=>{
+            for(let attr of self.attrs){
+                self.doc.set(attr, null)
+            }
+        },
+        initForm: (attrs, validation)=>{
+            self.attrs = attrs
+            self.enabled = false
+            self.validFlags = {}
 
+            self.doc = observable(asMap())
+            self.doc.observe((ch)=>{
+                console.log('ch', ch)
+                self.dirty=true
+                let name = ch.name
+                let msg = validation[name](ch.newValue)
+                if(msg == ''){
+                    self.validFlags[name] = true
+                }
+                else{
+                    self.validFlags[name] = false
+                }
+                self['error_message_' + name] = msg
+                self.enabled = _.every(self.validFlags, (val) => val)
+                self.update()
+            })
+            self.clear()
             self.opts.rv.observe((ch)=>{
                 if(self.dirty){
                     self.opts.rv.set(self.id)
@@ -26,7 +50,7 @@ export const FormMixin = (self) => {
                 else{
                     self.id = ch.newValue
                     let doc = self.store.collections[self.store.subsId[self.opts.predicateid]].get(self.id) || {}
-                    self.doc.clear()
+                    self.clear()
                     self.dirty = false
                     for (let key of Object.keys(doc)) {
                         self.doc.set(key, doc[key])
