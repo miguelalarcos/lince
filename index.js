@@ -8,4 +8,7 @@ ws.dispatcher = dispatcher
 ui.dispatcher = dispatcher
 ui.store = store
 dispatcher.ws = ws
+dispatcher.store = store
 store.ws = ws
+
+dispatcher.setupPending()

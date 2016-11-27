@@ -1,5 +1,6 @@
 // import _ from 'lodash'
 import mbox from 'mobx'
+import {ws} from './webSocketActor'
 
 class uiActor{
   constructor(){
@@ -20,12 +21,12 @@ export const LinkMixin = (self) => {
                 self.update()
             })
         },
-        linkMap: (rm, name, uidest) => {
-            self[uidest] = rm.get(name)
+        linkMap: (rm, name, uidest, trans=(x)=>x) => {
+            self[uidest] = trans(rm.get(name))
             self.update()
             mobx.observe(rm, (ch) => {
                 if(ch.name == name) {
-                    self[uidest] = ch.newValue
+                    self[uidest] = trans(ch.newValue)
                     self.update()
                 }
             })
@@ -52,22 +53,24 @@ export const UImixin = (self) => {
           }
       })
     },
-    subscribePredicate: (id, predicate, args) => {
-      ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection})=>{
-          self.mapIdTicket[id] = ticket
-          if(ui.store.metadata.get(ticket) == 'ready'){
-              self.handle(ticket, collection)
-          }
-          else{
-              const dispose = ui.store.metadata.observe((change) => {
-                  // if(change.newValue == 'initializing'){self.items = []} else
-                  if(change.name == ticket && change.newValue == 'ready'){
-                      self.handle(ticket, collection)
-                      dispose()
-                  }
-              })
-          }
-      })
+    subscribePredicate: (filter, id, predicate, args) => {
+      if(ws.connected.get()) {
+          ui.store.ask('subscribe', filter, id, predicate, args).then(({ticket, collection}) => {
+              self.mapIdTicket[id] = ticket
+              if (ui.store.metadata.get(ticket) == 'ready') {
+                  self.handle(ticket, collection)
+              }
+              else {
+                  const dispose = ui.store.metadata.observe((change) => {
+                      // if(change.newValue == 'initializing'){self.items = []} else
+                      if (change.name == ticket && change.newValue == 'ready') {
+                          self.handle(ticket, collection)
+                          dispose()
+                      }
+                  })
+              }
+          })
+      }
     },
     handle: (ticket, collection) => {
       self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))

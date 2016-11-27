@@ -6,14 +6,29 @@ export const FormMixin = (self) => {
     return {
         dispatcher: ui.dispatcher,
         store: ui.store,
+        enabled: false,
         dirty: false,
         id: null,
+        beforeAdd: (doc) => doc,
+        beforeUpdate: (doc) => doc,
+        afterSave: () => null,
         save: (evt) => {
+            self.enabled = false
             let id = self.doc.get('id')
+            let doc = self.doc.toJS()
             if(id) {
-                self.dispatcher.ask('rpc', 'update', self.collection, id, self.doc)
+                doc = self.beforeUpdate(doc)
+                self.dispatcher.ask('rpc', 'update', self.collection, id, doc).then(()=>{
+                    self.enabled=true
+                    self.afterSave()
+                })
             }else{
-                self.dispatcher.ask('rpc', 'add', self.collection, self.doc).then((id)=>self.doc.set('id', id))
+                doc = self.beforeAdd(doc)
+                self.dispatcher.ask('rpc', 'add', self.collection, doc).then((id)=>{
+                    self.doc.set('id', id)
+                    self.enabled = true
+                    self.afterSave()
+                })
             }
         },
         clear: ()=>{
@@ -48,8 +63,14 @@ export const FormMixin = (self) => {
                     self.opts.rv.set(self.id)
                 }
                 else{
+                    let doc
                     self.id = ch.newValue
-                    let doc = self.store.collections[self.store.subsId[self.opts.predicateid]].get(self.id) || {}
+                    if(self.id == null){
+                        doc = {}
+                    }
+                    else {
+                        doc = self.store.collections[self.store.subsId[self.opts.predicateid]].get(self.id) || {}
+                    }
                     self.clear()
                     self.dirty = false
                     for (let key of Object.keys(doc)) {

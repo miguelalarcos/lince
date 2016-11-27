@@ -33,9 +33,10 @@ class Controller extends Actor{
 
     handle_unsubscribe(ticket, done){
         console.log('unsubscribe', ticket)
-        //console.log(this.cursors)
-        this.cursors[ticket].close()
-        delete this.cursors[ticket]
+        if(this.cursors[ticket]) {
+            this.cursors[ticket].close()
+            delete this.cursors[ticket]
+        }
         done()
     }
 

@@ -11,6 +11,8 @@ class collectionStoreActor extends Actor{
         this.collections = {}
         this.metadata = observable(asMap())
         this.predicates = {}
+        this.filters = {}
+        this.ticketsCollection = {}
         this.promises = {}
         this.subsId = {}
         this.registered = {}
@@ -37,32 +39,49 @@ class collectionStoreActor extends Actor{
         }
     }
 
-    subscribe(promise, id, predicate, ...args){
-        let ticket = T.getTicket(predicate, args)
-        if(!this.collections[ticket]) {
-            this.collections[ticket] = observable(asMap([], asReference))
+    disconnectedNotify(collection, data){
+        let old = data.id && this.collections[collection].get(data.id) || null
+        let tickets = Object.keys(this.ticketsCollection)
+        tickets = _.filter(tickets, (x) => this.ticketsCollection[x] == collection)
+        for(let ticket of tickets){
+            let filter = this.filters[ticket]
+            if(filter(data)){
+                if(old && filter(old)) {
+                    this.notify({type: 'update', data, ticket})
+                }else{
+                    this.notify({type: 'add', data, ticket})
+                }
+            }else if(old && filter(old)){
+                this.notify({type: 'delete', data, ticket})
+            }
         }
-        this.activeTickets.add(ticket)
-        //let name = this.registered[predicate]
-        let collection = this.collections[ticket]
-        promise.resolve({ticket, collection})
-        if(this.subsId[id]) {
-            delete this.collections[this.subsId[id]]
-            this.ws.tell('unsubscribe', this.subsId[id])
-            this.activeTickets.delete(this.subsId[id])
-        }
-        this.subsId[id] = ticket
-        args.unshift(predicate)
-        this.ws.tell('subscribe', args, ticket)
     }
 
-    //newCollection(name){
-    //    this.collections[name] = observable(asMap([], asReference))
-    //}
+    subscribe(promise, filter, id, predicate, ...args){
+        if(this.ws.connected.get()) {
+            let ticket = T.getTicket(predicate, args)
+            this.filters[ticket] = filter(...args)
+            this.ticketsCollection[ticket] = this.registered[predicate]
+            if (!this.collections[ticket]) {
+                this.collections[ticket] = observable(asMap([], asReference))
+            }
+            this.activeTickets.add(ticket)
+            //let name = this.registered[predicate]
+            let collection = this.collections[ticket]
+            promise.resolve({ticket, collection})
+            if (this.subsId[id]) {
+                delete this.collections[this.subsId[id]]
+                this.ws.tell('unsubscribe', this.subsId[id])
+                this.activeTickets.delete(this.subsId[id])
+            }
+            this.subsId[id] = ticket
+            args.unshift(predicate)
+            this.ws.tell('subscribe', args, ticket)
+        }
+    }
 
     register(predicate, collection){
         this.registered[predicate] = collection
-        // this.predicates.register(predicate, coll)
     }
 
     getCollection(predicate){
