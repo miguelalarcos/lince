@@ -7,13 +7,13 @@ import Actor from '../lib/Actor.js'
 class WebSocketActor extends Actor{
 
     constructor(){
-        super()
+        super('websocketActor')
         this.on('ready', ()=>this.onInput())
         this.connected = observable(false)
-        this.storage = null
+        //this.storage = null
         this.dispatcher = null
-        this.offline = observable(asMap())
-        this.statePredicates = {}
+        //this.offline = observable(asMap())
+        //this.statePredicates = {}
         this.ws = null
 
         this.connect()
@@ -38,7 +38,7 @@ class WebSocketActor extends Actor{
         //    ,5000)
     }
 
-    onInput(){
+    _onInput(){
         if(this.connected.get()){
             while(this.input.length > 0){
                 let input = this.input[0]
@@ -62,26 +62,9 @@ class WebSocketActor extends Actor{
     onOpen(){
         this.connected.set(true)
         this.emit('ready')
-        /*
-         let keys = _.keys(this.offline)
-         for(let k of keys){
-         doc = this.offline[k]
-         if(!doc.id){
-         this.send({type: 'update', ticket: ticket, args: args})
-         }else{
-         this.send({type: 'add', ticket: ticket, args: args})
-         }
-         delete this.offline[k]
-         }
-         keys = _.keys(this.statePredicates)
-         for(let key of keys) {
-         let pred = this.statePredicates[key]
-         //
-         }
-         */
     }
 
-    handle(input){
+    _handle(input){
         //let {method, args} = input
         let method = input[0]
         let args = input[1]
@@ -110,16 +93,18 @@ class WebSocketActor extends Actor{
 
     }
 
-    send(obj){
-        this.ws.send(JSON.stringify(obj))
+    send(type, args, ticket){
+        if(this.connected.get()) {
+            this.ws.send(JSON.stringify({type, args, ticket}))
+        }
     }
 
-    subscribe(predicate, args, ticket){
+    _subscribe(predicate, args, ticket){
         this.statePredicates[ticket] = {predicate, args}
         this.send({type: 'subscribe', predicate, args, ticket})
     }
 
-    unsubscribe(ticket){
+    _unsubscribe(ticket){
         delete this.statePredicates[ticket]
         this.send({type: 'unsubscribe', ticket})
     }

@@ -10,15 +10,19 @@ class Controller extends Actor{
         this.cursors = {}
     }
     async_notify(msg, done){
-        console.log('async_notify', msg)
         msg = JSON.parse(msg)
-        if(msg.type == 'subscribe'){
-            this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
-        }else if(msg.type == 'unsubscribe'){
-            this.handle_unsubscribe(msg.ticket, done)
-        }
-        else{
-            this.handle_rpc(msg.type, msg.args, msg.ticket, done)
+        if(msg.ticket > Controller.lastTicket) {
+            console.log('async_notify', msg)
+            if (msg.type == 'subscribe') {
+                this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
+            } else if (msg.type == 'unsubscribe') {
+                this.handle_unsubscribe(msg.ticket, done)
+            }
+            else {
+                this.handle_rpc(msg.type, msg.args, msg.ticket, done)
+            }
+        }else{
+            done()
         }
     }
     handle_rpc(command, args, ticket, done){
@@ -27,6 +31,7 @@ class Controller extends Actor{
         this['rpc_' + command](...args, (val)=>{
             ret.data=val
             this.ws.send(JSON.stringify(ret))
+            Controller.lastTicket = ticket
             done()
         })
     }
@@ -37,6 +42,7 @@ class Controller extends Actor{
             this.cursors[ticket].close()
             delete this.cursors[ticket]
         }
+        Controller.lastTicket = ticket
         done()
     }
 
@@ -82,6 +88,7 @@ class Controller extends Actor{
                     }
                 }
             )
+            Controller.lastTicket = ticket
             done()
             // cursor.on('data', (change) => {ret.data=change; this.ws.send(JSON.stringify(ret))})
         })
@@ -129,5 +136,7 @@ class Controller extends Actor{
         }
         console.log('close')}
 }
+
+Controller.lastTicket = -1
 
 module.exports.Controller = Controller

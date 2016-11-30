@@ -11,4 +11,4 @@ dispatcher.ws = ws
 dispatcher.store = store
 store.ws = ws
 
-dispatcher.setupPending()
+dispatcher.setup()
