@@ -3,6 +3,7 @@ import _ from 'lodash'
 // import {Actor} from './Actor.js'
 // import {T} from './Ticket.js'
 import Actor from '../lib/Actor.js'
+import {encodeDates, decodeDates} from '../lib/encodeDate'
 
 class WebSocketActor extends Actor{
 
@@ -51,6 +52,7 @@ class WebSocketActor extends Actor{
     onMessage(msg){
         //console.log('onmessage', msg)
         let obj = JSON.parse(msg)
+        obj.data = decodeDates(obj.data, obj.dates)
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
             this.store.notify(obj)
         }
@@ -95,7 +97,8 @@ class WebSocketActor extends Actor{
 
     send(type, args, ticket){
         if(this.connected.get()) {
-            this.ws.send(JSON.stringify({type, args, ticket}))
+            let {path, obj} = encodeDates(args)
+            this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
         }
     }
 

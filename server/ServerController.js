@@ -1,6 +1,8 @@
 r = require('rethinkdb')
 Q = require('q')
 Actor = require('../lib/Actor.js')
+encodeDates = require('../lib/encodeDateServer').encodeDates
+decodeDates = require('../lib/encodeDateServer').decodeDates
 
 class Controller extends Actor{
     constructor(ws, conn){
@@ -11,6 +13,7 @@ class Controller extends Actor{
     }
     async_notify(msg, done){
         msg = JSON.parse(msg)
+        msg.args = decodeDates(msg.args, msg.dates)
         if(msg.ticket > Controller.lastTicket) {
             console.log('async_notify', msg)
             if (msg.type == 'subscribe') {
@@ -29,7 +32,10 @@ class Controller extends Actor{
         console.log('rpc', command, args, ticket)
         let ret = {ticket: ticket, type: 'rpc'}
         this['rpc_' + command](...args, (val)=>{
-            ret.data=val
+            //ret.data=val
+            let {path, obj} = encodeDates(val)
+            ret.dates = path
+            ret.data = obj
             this.ws.send(JSON.stringify(ret))
             Controller.lastTicket = ticket
             done()
@@ -58,7 +64,7 @@ class Controller extends Actor{
                         console.log('error at streaming', err, '---')
                     }else {
                         if (data.state) {
-                            data = {type: data.state, ticket: ticket}
+                            data = {type: data.state, ticket: ticket, dates: []}
                             //console.log('feed', data)
                             this.ws.send(JSON.stringify(data))
                         } else {
@@ -80,9 +86,13 @@ class Controller extends Actor{
                                 delete data.new_val
                             }
                             ret.type = type
-                            ret.data = data
+                            //ret.data = data
                             ret.predicate = predicate
                             console.log('feed', ret)
+                            //ret.dates = encodeDates(data)
+                            let {path, obj} = encodeDates(data)
+                            ret.dates = path
+                            ret.data = obj
                             this.ws.send(JSON.stringify(ret))
                         }
                     }

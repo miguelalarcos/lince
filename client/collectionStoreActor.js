@@ -9,18 +9,17 @@ class DataBase{
         this.collections = {}
     }
     add(collection, key, value){
-        console.log(collection, this.collections)
+        console.log('-->', this.collections, collection, key, value)
         if(collection in this.collections){
             let collection_ = this.collections[collection]
-            console.log(this.collections, collection, key)
             if(key in collection_) {
                 let count = collection_[key].__count + 1
                 value.__count = count
                 //collections[key] = value
-                this,collections[collection][key] = value
+                this.collections[collection][key] = value
             }else{
                 value.__count = 1
-                this.collections[collection] = {[key]: value}
+                this.collections[collection][key] = value // = {[key]: value}
             }
         }
         else{
@@ -29,6 +28,7 @@ class DataBase{
         }
     }
     delete(collection, key){
+        console.log('-->', this.collections, collection, key)
         let data = this.collections[collection][key]
         data.__count -= 1
         if(data.__count == 0){
