@@ -22,6 +22,7 @@
     "express-ws": "^2.0.0",
     "mobx": "^2.6.2",
     "moment": "^2.17.0",
+    "moment-range": "^2.2.0",
     "q": "^1.4.1",
     "rethinkdb": "^2.3.3"
   }
