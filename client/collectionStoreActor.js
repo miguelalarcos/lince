@@ -1,42 +1,60 @@
 import {observable, asMap, asReference} from 'mobx'
 import {T} from './Ticket.js'
 import _ from 'lodash'
-// import {Actor} from './Actor.js'
 import Actor from '../lib/Actor.js'
+import {encodeDates, decodeDates} from '../lib/encodeDate'
+
+const localStorageGet = (name) => {
+    let doc = JSON.parse(localStorage[name])
+    return decodeDates(doc.obj, doc.path)
+}
+
+const localStorageSet = (name, value) => {
+    let {path, obj} = encodeDates(value)
+    localStorage[name] = JSON.stringify({path, obj})
+}
 
 class DataBase{
     constructor(){
-        this.collections = {}
+        //this.collections = {}
+        localStorageSet('collections', {})
+    }
+    collections(){
+        return localStorageGet('collections')
     }
     add(collection, key, value){
-        console.log('-->', this.collections, collection, key, value)
-        if(collection in this.collections){
-            let collection_ = this.collections[collection]
+        let collections = localStorageGet('collections')
+        if(collection in collections){
+            let collection_ = collections[collection]
             if(key in collection_) {
                 let count = collection_[key].__count + 1
                 value.__count = count
-                //collections[key] = value
-                this.collections[collection][key] = value
+                collections[collection][key] = value
+                localStorageSet('collections', collections)
             }else{
                 value.__count = 1
-                this.collections[collection][key] = value // = {[key]: value}
+                collections[collection][key] = value
+                localStorageSet('collections', collections)
             }
         }
         else{
             value.__count = 1
-            this.collections[collection] = {[key]: value}
+            collections[collection] = {[key]: value}
+            localStorageSet('collections', collections)
         }
     }
     delete(collection, key){
-        console.log('-->', this.collections, collection, key)
-        let data = this.collections[collection][key]
+        let collections = localStorageGet('collections')
+        let data = collections[collection][key]
         data.__count -= 1
         if(data.__count == 0){
             delete this.collections[collection][key]
+            localStorageSet('collections', collections)
         }
     }
     get(collection, key){
-        return this.collections[collection][key]
+        let collections = localStorageGet('collections')
+        return collections[collection][key]
     }
 }
 
@@ -76,27 +94,45 @@ class collectionStoreActor extends Actor{
         }
     }
 
+    updateLocalDataBase(method, collection, data){
+        switch(method){
+            case 'add':
+            case 'update':
+                this.dataBase.add(collection, data.newVal.id, data.newVal)
+                break
+            case 'delete':
+                this.dataBase.delete(collection, data.id)
+                break
+        }
+        this.disconnectedNotify(collection, data)
+    }
+
     disconnectedNotify(collection, data){
-        let old = data.id && this.collections[collection].get(data.id) || null
+        let newVal = data.newVal
         let tickets = Object.keys(this.ticketsCollection)
         tickets = _.filter(tickets, (x) => this.ticketsCollection[x] == collection)
+        console.log('tickets', tickets)
         for(let ticket of tickets){
+            ticket = parseInt(ticket)
             let filter = this.filters[ticket]
-            if(filter(data)){
+            console.log('-->', this.collections, ticket)
+            let old = newVal.id && this.collections[ticket].get(newVal.id) || null
+            if(filter(newVal)){
                 if(old && filter(old)) {
-                    this.notify({type: 'update', data, ticket}, false)
+                    this.updateCollection({type: 'update', data, ticket})
                 }else{
-                    this.notify({type: 'add', data, ticket}, false)
+                    this.updateCollection({type: 'add', data, ticket})
                 }
             }else if(old && filter(old)){
-                this.notify({type: 'delete', data, ticket}, false)
+                this.updateCollection({type: 'delete', data, ticket})
             }
         }
     }
 
     subscribe(promise, filter, id, predicate, ...args){
+        let ticket = T.getTicket(predicate, args)
         if(this.ws.connected.get()) {
-            let ticket = T.getTicket(predicate, args)
+            //let ticket = T.getTicket(predicate, args)
             this.filters[ticket] = filter(...args)
             this.ticketsCollection[ticket] = this.registered[predicate]
             if (!this.collections[ticket]) {
@@ -110,17 +146,19 @@ class collectionStoreActor extends Actor{
                 delete this.collections[this.subsId[id]]
                 this.ws.tell('send', 'unsubscribe', [], this.subsId[id])
                 this.activeTickets.delete(this.subsId[id])
+                delete this.ticketsCollection[this.subsId[id]]
             }
             this.subsId[id] = ticket
             args.unshift(predicate)
             this.ws.tell('send', 'subscribe', args, ticket)
         }else{
-            let collections = Object.keys(this.dataBase)
+            this.metadata.set(''+ticket, 'ready')
+            let collections = Object.keys(this.dataBase.collections())
             for(let collection of collections){
-                let keys = Object.keys(this.dataBase[collection])
-                for(key of keys){
+                let keys = Object.keys(this.dataBase.collections()[collection])
+                for(let key of keys){
                     let data = this.dataBase.get(collection, key)
-                    this.disconnectedNotify(collection, data)
+                    this.disconnectedNotify(collection, {newVal: data})
                 }
             }
         }
@@ -142,7 +180,7 @@ class collectionStoreActor extends Actor{
         ticket = 1
     }
 
-    notify(msg, cache=true){
+    updateCollection(msg){
         let collection = this.registered[msg.predicate]
         if(!_.includes([...this.activeTickets], msg.ticket)){
             return
@@ -156,53 +194,34 @@ class collectionStoreActor extends Actor{
                 break
             case 'add':
                 this.add(msg.data, msg.ticket)
-                if(cache){
-                    this.dataBase.add(collection, msg.data.newVal.id, msg.data.newVal)
-                }
                 break
             case 'update':
                 this.update(msg.data, msg.ticket)
                 break
             case 'delete':
                 this.delete(msg.data.id, msg.ticket)
-                if(cache){
-                    this.dataBase.delete(collection, msg.data.id)
-                }
                 break
         }
     }
 
     add(doc, t){
+        console.log('final add', doc, t)
         doc = doc.newVal
         let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
-        //let tickets = aux && aux.tickets || new Set()
-        //tickets.add(t)
-        //doc.tickets = tickets
         this.collections[t].set(doc.id, doc)
         this.collections[t].delete(':'+t)
     }
 
     update(doc, t){
+        console.log('final update', t, doc)
         doc = doc.newVal
-        //doc.tickets = this.collections[t].get(doc.id).tickets
-        //doc.tickets.add(t)
         this.collections[t].set(doc.id, doc)
     }
 
     delete(id, t){
+        console.log('final delete', id, t)
         let doc = this.collections[t].get(id)
-        //let tickets = new Set([...doc.tickets])
-        //tickets.delete(t)
-        //if(tickets.size == 0) {
         this.collections[t].delete(id)
-        //}else{
-        //    console.log('tickets antes del delete', [...doc.tickets])
-        //    doc = Object.assign({}, doc)
-        //    doc.tickets = tickets
-        //    console.log('tickets despues del delete', [...doc.tickets])
-        //    console.log('delete con update')
-        //    this.collections[collection].set(id, doc)
-        //}
     }
 
 }

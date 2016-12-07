@@ -24,7 +24,7 @@
             this.linkMap(this.opts.link, this.opts.name, 'value', (d)=>moment(d).format(this.opts.format))
         }
 
-        this.show = false
+        this.show = true
         weeks(){
             return [0, 1, 2, 3, 4, 5, 6]
         }

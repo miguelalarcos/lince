@@ -91,7 +91,7 @@ class Controller extends Actor{
                                 ret.type = type
                                 //ret.data = data
                                 ret.predicate = predicate
-                                console.log('feed', ret)
+                                console.log('feed')
                                 //ret.dates = encodeDates(data)
                                 let {path, obj} = encodeDates(data)
                                 ret.dates = path

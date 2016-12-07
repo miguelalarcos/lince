@@ -39,6 +39,12 @@ class WebSocketActor extends Actor{
         //    ,5000)
     }
 
+    close(){
+        console.log('closing...')
+        this.ws.close()
+        this.connected.set(false)
+    }
+
     _onInput(){
         if(this.connected.get()){
             while(this.input.length > 0){
@@ -54,10 +60,10 @@ class WebSocketActor extends Actor{
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
-            this.store.notify(obj)
+            this.store.updateCollection(obj)
         }
         else{
-            this.dispatcher.notify(obj)
+            this.dispatcher.response(obj)
         }
     }
 

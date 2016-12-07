@@ -54,7 +54,8 @@ export const UImixin = (self) => {
       })
     },
     subscribePredicate: (filter, id, predicate, args) => {
-      if(ws.connected.get()) {
+      //if(ws.connected.get()) {
+          console.log('*** subscribePredicate', args)
           ui.store.ask('subscribe', filter, id, predicate, args).then(({ticket, collection}) => {
               self.mapIdTicket[id] = ticket
               if (ui.store.metadata.get(ticket) == 'ready') {
@@ -70,7 +71,7 @@ export const UImixin = (self) => {
                   })
               }
           })
-      }
+      //}
     },
     handle: (ticket, collection) => {
       self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))

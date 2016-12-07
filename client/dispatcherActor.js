@@ -1,8 +1,30 @@
 import {T} from './Ticket.js'
-// import {Actor} from './Actor.js'
 import Actor from '../lib/Actor.js'
 import {observable, asMap} from 'mobx'
 import _ from 'lodash'
+import {encodeDates, decodeDates} from '../lib/encodeDate'
+
+const localStorageGet = (name) => {
+    let doc = JSON.parse(localStorage[name])
+    return decodeDates(doc.obj, doc.path)
+}
+
+const localStorageSet = (name, value) => {
+    let {path, obj} = encodeDates(value)
+    localStorage[name] = JSON.stringify({path, obj})
+}
+
+const localStoragePush = (name, value) => {
+    let arr = localStorageGet(name)
+    arr.push(value)
+    localStorageSet(name, arr)
+}
+
+const localStorageShift = (name) => {
+    let arr = localStorageGet(name)
+    arr.shift()
+    localStorageSet(name, arr)
+}
 
 class DispatcherActor extends Actor{
     constructor(){
@@ -12,7 +34,8 @@ class DispatcherActor extends Actor{
         this.store = null
         this.promises = {}
         this.rv = observable(asMap())
-        this.pending = []
+        //this.pending = []
+        localStorageSet('pending', [])
     }
 
     setup(){
@@ -24,7 +47,8 @@ class DispatcherActor extends Actor{
     }
 
     sendPending(){
-        for(let p of this.pending){
+        localStorage['dataBase'] = JSON.stringify({})
+        for(let p of localStorageGet('pending')){
             if(p.method == 'add'){
                 delete p.data.id
             }
@@ -36,45 +60,27 @@ class DispatcherActor extends Actor{
     rpc(promise, method, ...args){
         let t = T.getTicket()
         let collection = args[0],
-            data = args[1]
+            data = args[2]
         if(_.includes(['add', 'update', 'delete'], method) && !this.ws.connected.get()){
-            console.log('offline')
-            this.store.disconnectedNotify(collection, data) // deberia usar tell o ask ???
+            this.store.tell('updateLocalDataBase', method, collection, {newVal: data})
             if(method == 'add') {
-                data.id = ':'+t
-                this.pending.push({ticket: t, collection, method, data})
-            }else if(method == 'update'){
-                /*let finded = false
-                for(let x of this.pending){
-                    if(x.method == 'update' && x.data.id == data.id){
-                        finded = true
-                        x.data = data
-                        break
-                    }
-                }
-                if(!finded){
-                    this.pending.push({ticket: t, collection, method, data})
-                }*/
-                this.pending.push({ticket: t, collection, method, data})
-            }else{
-                this.pending.push({ticket: t, collection, method, data})
+                data.id = ':' + t
             }
+            localStoragePush('pending', {ticket: t, collection, method, data})
         }else if(_.includes(['add', 'update', 'delete'], method) && this.ws.connected.get()) {
-            console.log('normal mode', method, args, t)
-            this.pending.push({collection, method, data, ticket: t})
+            localStoragePush('pending', {ticket: t, collection, method, data})
             this.ws.tell('send', method, args, t)
             this.promises[t] = promise
         } else{
             this.ws.tell('send', method, args, t)
             this.promises[t] = promise
         }
-        console.log('***', JSON.stringify(this.pending))
     }
 
-    notify(msg){
-        console.log(msg.ticket, this.pending)
-        if(_.includes(['add', 'update', 'delete'], msg.type) && this.pending[0].ticket == msg.ticket){
-            this.pending.shift()
+    response(msg){
+        if(_.includes(['add', 'update', 'delete'], msg.type) && localStorageGet('pending')[0].ticket == msg.ticket){
+            localStorageShift('pending')
+            //localStorage.pending.shift()
         }
         this.promises[msg.ticket] && this.promises[msg.ticket].resolve(msg.data)
         delete this.promises[msg.ticket]
