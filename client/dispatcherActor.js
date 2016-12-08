@@ -1,7 +1,6 @@
 import {T} from './Ticket.js'
 import Actor from '../lib/Actor.js'
 import {observable, asMap} from 'mobx'
-import _ from 'lodash'
 
 class DispatcherActor extends Actor{
     constructor(){
@@ -23,7 +22,6 @@ class DispatcherActor extends Actor{
         this.promises[msg.ticket] && this.promises[msg.ticket].resolve(msg.data)
         delete this.promises[msg.ticket]
         this.rv.set('rpc', null)
-        console.log('rpc response', msg)
         this.rv.set('rpc', msg.data)
     }
 }

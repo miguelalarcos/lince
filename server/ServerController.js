@@ -170,14 +170,11 @@ class Controller extends Actor{
     }
 
     rpc_update(collection, id, doc){
-        console.log('rpc update', collection, id, doc)
         let oldDoc
         return this.get(collection, id).then((old)=>{
-            console.log('A')
             oldDoc = old
             return this.can('update', collection, oldDoc)
         }).then((can)=>{
-            console.log('B')
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
                 return this.can('insert', collection, newDoc)
@@ -185,12 +182,10 @@ class Controller extends Actor{
                 return false
             }
         }).then((can)=>{
-            console.log('C')
             if(can){
                 doc = this.beforeUpdate(collection, doc)
                 return r.table(collection).get(id).update(doc).run(this.conn).then((doc)=>{
-                    console.log('doc.replaced', doc.replaced)
-                    return Q(doc.replaced)
+                    return doc.replaced
                 })
             }else{
                 return 0

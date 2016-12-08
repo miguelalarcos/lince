@@ -113,8 +113,11 @@ class collectionStoreActor extends Actor{
     }
 
     notify(msg){
+        console.log('msg in notify de collection store', msg)
         let collection = this.registered[msg.predicate]
         if(!_.includes([...this.activeTickets], msg.ticket)){
+            console.log([...this.activeTickets], msg.ticket)
+            console.log('return')
             return
         }
         switch(msg.type){
@@ -139,36 +142,20 @@ class collectionStoreActor extends Actor{
     add(doc, t){
         doc = doc.newVal
         let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
-        //let tickets = aux && aux.tickets || new Set()
-        //tickets.add(t)
-        //doc.tickets = tickets
         this.collections[t].set(doc.id, doc)
         this.collections[t].delete(':'+t)
     }
 
     update(doc, t){
+        console.log('uupdate en collection store', doc, t)
         doc = doc.newVal
-        //doc.tickets = this.collections[t].get(doc.id).tickets
-        //doc.tickets.add(t)
         this.collections[t].set(doc.id, doc)
     }
 
     delete(id, t){
         let doc = this.collections[t].get(id)
-        //let tickets = new Set([...doc.tickets])
-        //tickets.delete(t)
-        //if(tickets.size == 0) {
         this.collections[t].delete(id)
-        //}else{
-        //    console.log('tickets antes del delete', [...doc.tickets])
-        //    doc = Object.assign({}, doc)
-        //    doc.tickets = tickets
-        //    console.log('tickets despues del delete', [...doc.tickets])
-        //    console.log('delete con update')
-        //    this.collections[collection].set(id, doc)
-        //}
     }
-
 }
 
 export const store = new collectionStoreActor()

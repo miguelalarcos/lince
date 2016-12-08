@@ -4,7 +4,7 @@ class Ticket{
     }
 
     getTicket(){
-        return this.ticket++
+        return ''+this.ticket++
     }
 }
 

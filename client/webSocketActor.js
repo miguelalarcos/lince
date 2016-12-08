@@ -1,7 +1,5 @@
-import {asMap, observable} from 'mobx'
+import {observable} from 'mobx'
 import _ from 'lodash'
-// import {Actor} from './Actor.js'
-// import {T} from './Ticket.js'
 import Actor from '../lib/Actor.js'
 import {encodeDates, decodeDates} from '../lib/encodeDate'
 
@@ -11,13 +9,11 @@ class WebSocketActor extends Actor{
         super('websocketActor')
         this.on('ready', ()=>this.onInput())
         this.connected = observable(false)
-        //this.storage = null
         this.dispatcher = null
-        //this.offline = observable(asMap())
-        //this.statePredicates = {}
         this.ws = null
+        this.offline = null
 
-        this.connect()
+        //this.connect()
     }
 
     connect(){
@@ -40,16 +36,18 @@ class WebSocketActor extends Actor{
     }
 
     onMessage(msg){
-        console.log('--------------', 'onmessage', msg)
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
 
+        this.dispatch(obj)
+    }
+
+    dispatch(obj){
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
-            this.store.notify(obj)
+            this.store.notify(obj) // tell?
         }
         else{
-            console.log('llamamos a dispatcher reposne con obj', obj)
-            this.dispatcher.response(obj)
+            this.dispatcher.response(obj) //tell?
         }
     }
 
@@ -62,6 +60,8 @@ class WebSocketActor extends Actor{
         if(this.connected.get()) {
             let {path, obj} = encodeDates(args)
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
+        }else{
+            this.offline.tell('send', {type, args, ticket})
         }
     }
 }
