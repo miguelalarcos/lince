@@ -54,23 +54,21 @@ export const UImixin = (self) => {
       })
     },
     subscribePredicate: (filter, id, predicate, args) => {
-      if(ws.connected.get()) {
-          ui.store.ask('subscribe', filter, id, predicate, args).then(({ticket, collection}) => {
-              self.mapIdTicket[id] = ticket
-              if (ui.store.metadata.get(ticket) == 'ready') {
-                  self.handle(ticket, collection)
-              }
-              else {
-                  const dispose = ui.store.metadata.observe((change) => {
-                      // if(change.newValue == 'initializing'){self.items = []} else
-                      if (change.name == ticket && change.newValue == 'ready') {
-                          self.handle(ticket, collection)
-                          dispose()
-                      }
-                  })
-              }
-          })
-      }
+      ui.store.ask('subscribe', filter, id, predicate, args).then(({ticket, collection}) => {
+          self.mapIdTicket[id] = ticket
+          if (ui.store.metadata.get(ticket) == 'ready') {
+              self.handle(ticket, collection)
+          }
+          else {
+              const dispose = ui.store.metadata.observe((change) => {
+                  // if(change.newValue == 'initializing'){self.items = []} else
+                  if (change.name == ticket && change.newValue == 'ready') {
+                      self.handle(ticket, collection)
+                      dispose()
+                  }
+              })
+          }
+      })
     },
     handle: (ticket, collection) => {
       self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))

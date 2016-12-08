@@ -39,25 +39,17 @@ class WebSocketActor extends Actor{
         //    ,5000)
     }
 
-    _onInput(){
-        if(this.connected.get()){
-            while(this.input.length > 0){
-                let input = this.input[0]
-                this.handle(input)
-                this.input.shift()
-            }
-        }
-    }
-
     onMessage(msg){
-        //console.log('onmessage', msg)
+        console.log('--------------', 'onmessage', msg)
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
+
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
             this.store.notify(obj)
         }
         else{
-            this.dispatcher.notify(obj)
+            console.log('llamamos a dispatcher reposne con obj', obj)
+            this.dispatcher.response(obj)
         }
     }
 
@@ -66,52 +58,12 @@ class WebSocketActor extends Actor{
         this.emit('ready')
     }
 
-    _handle(input){
-        //let {method, args} = input
-        let method = input[0]
-        let args = input[1]
-        let ticket = input.splice(-1)[0]
-        //let ticket = T.getTicket()
-
-        /*
-        if(!this.connected.get()){
-            if(method == 'add'){
-                let doc = args[0]
-                this.offline.set(ticket, doc)
-            }else if(method == 'update'){
-                let doc = args[0]
-                let id = doc.id || ticket
-                this.offline.set(id, doc)
-            }else if(method == 'delete'){
-                let id = args[0] || ticket
-                delete this.offline.delete(id)
-            }
-        }else{
-            console.log('ws send', {type: method, args: args, ticket: ticket})
-            this.send({type: method, args: args, ticket: ticket})
-        }
-        */
-        this.send({type: method, args: args, ticket: ticket})
-
-    }
-
     send(type, args, ticket){
         if(this.connected.get()) {
             let {path, obj} = encodeDates(args)
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
         }
     }
-
-    _subscribe(predicate, args, ticket){
-        this.statePredicates[ticket] = {predicate, args}
-        this.send({type: 'subscribe', predicate, args, ticket})
-    }
-
-    _unsubscribe(ticket){
-        delete this.statePredicates[ticket]
-        this.send({type: 'unsubscribe', ticket})
-    }
-
 }
 
 export const ws = new WebSocketActor()

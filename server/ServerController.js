@@ -35,6 +35,7 @@ class Controller extends Actor{
         let ret = {ticket: ticket, type: 'rpc'}
         Q(this['rpc_' + command](...args)).then((val)=>{
             //ret.data=val
+            console.log('-------------------------(a)', val)
             let {path, obj} = encodeDates(val)
             ret.dates = path
             ret.data = obj
@@ -91,7 +92,7 @@ class Controller extends Actor{
                                 ret.type = type
                                 //ret.data = data
                                 ret.predicate = predicate
-                                console.log('feed', ret)
+                                console.log('feed')
                                 //ret.dates = encodeDates(data)
                                 let {path, obj} = encodeDates(data)
                                 ret.dates = path
@@ -169,11 +170,14 @@ class Controller extends Actor{
     }
 
     rpc_update(collection, id, doc){
+        console.log('rpc update', collection, id, doc)
         let oldDoc
-        this.get(collection, id).then((old)=>{
+        return this.get(collection, id).then((old)=>{
+            console.log('A')
             oldDoc = old
             return this.can('update', collection, oldDoc)
         }).then((can)=>{
+            console.log('B')
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
                 return this.can('insert', collection, newDoc)
@@ -181,10 +185,13 @@ class Controller extends Actor{
                 return false
             }
         }).then((can)=>{
+            console.log('C')
             if(can){
                 doc = this.beforeUpdate(collection, doc)
-                //this._update(collection, id, doc, callback)
-                return r.table(collection).get(id).update(doc).run(this.conn).then((doc)=>doc.replaced)
+                return r.table(collection).get(id).update(doc).run(this.conn).then((doc)=>{
+                    console.log('doc.replaced', doc.replaced)
+                    return Q(doc.replaced)
+                })
             }else{
                 return 0
             }

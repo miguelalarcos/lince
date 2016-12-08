@@ -53,7 +53,6 @@ class collectionStoreActor extends Actor{
         this.subsId = {}
         this.registered = {}
         this.activeTickets = new Set()
-        this.dataBase = new DataBase()
     }
 
     getTicketForPredicate(predicate, args={}){
@@ -76,54 +75,25 @@ class collectionStoreActor extends Actor{
         }
     }
 
-    disconnectedNotify(collection, data){
-        let old = data.id && this.collections[collection].get(data.id) || null
-        let tickets = Object.keys(this.ticketsCollection)
-        tickets = _.filter(tickets, (x) => this.ticketsCollection[x] == collection)
-        for(let ticket of tickets){
-            let filter = this.filters[ticket]
-            if(filter(data)){
-                if(old && filter(old)) {
-                    this.notify({type: 'update', data, ticket}, false)
-                }else{
-                    this.notify({type: 'add', data, ticket}, false)
-                }
-            }else if(old && filter(old)){
-                this.notify({type: 'delete', data, ticket}, false)
-            }
-        }
-    }
-
     subscribe(promise, filter, id, predicate, ...args){
-        if(this.ws.connected.get()) {
-            let ticket = T.getTicket(predicate, args)
-            this.filters[ticket] = filter(...args)
-            this.ticketsCollection[ticket] = this.registered[predicate]
-            if (!this.collections[ticket]) {
-                this.collections[ticket] = observable(asMap([], asReference))
-            }
-            this.activeTickets.add(ticket)
-            //let name = this.registered[predicate]
-            let collection = this.collections[ticket]
-            promise.resolve({ticket, collection})
-            if (this.subsId[id]) {
-                delete this.collections[this.subsId[id]]
-                this.ws.tell('send', 'unsubscribe', [], this.subsId[id])
-                this.activeTickets.delete(this.subsId[id])
-            }
-            this.subsId[id] = ticket
-            args.unshift(predicate)
-            this.ws.tell('send', 'subscribe', args, ticket)
-        }else{
-            let collections = Object.keys(this.dataBase)
-            for(let collection of collections){
-                let keys = Object.keys(this.dataBase[collection])
-                for(key of keys){
-                    let data = this.dataBase.get(collection, key)
-                    this.disconnectedNotify(collection, data)
-                }
-            }
+        let ticket = T.getTicket(predicate, args)
+        this.filters[ticket] = filter(...args)
+        this.ticketsCollection[ticket] = this.registered[predicate]
+        if (!this.collections[ticket]) {
+            this.collections[ticket] = observable(asMap([], asReference))
         }
+        this.activeTickets.add(ticket)
+        //let name = this.registered[predicate]
+        let collection = this.collections[ticket]
+        promise.resolve({ticket, collection})
+        if (this.subsId[id]) {
+            delete this.collections[this.subsId[id]]
+            this.ws.tell('send', 'unsubscribe', [], this.subsId[id])
+            this.activeTickets.delete(this.subsId[id])
+        }
+        this.subsId[id] = ticket
+        args.unshift(predicate)
+        this.ws.tell('send', 'subscribe', args, ticket)
     }
 
     register(predicate, collection){
@@ -142,7 +112,7 @@ class collectionStoreActor extends Actor{
         ticket = 1
     }
 
-    notify(msg, cache=true){
+    notify(msg){
         let collection = this.registered[msg.predicate]
         if(!_.includes([...this.activeTickets], msg.ticket)){
             return
@@ -156,18 +126,12 @@ class collectionStoreActor extends Actor{
                 break
             case 'add':
                 this.add(msg.data, msg.ticket)
-                if(cache){
-                    this.dataBase.add(collection, msg.data.newVal.id, msg.data.newVal)
-                }
                 break
             case 'update':
                 this.update(msg.data, msg.ticket)
                 break
             case 'delete':
                 this.delete(msg.data.id, msg.ticket)
-                if(cache){
-                    this.dataBase.delete(collection, msg.data.id)
-                }
                 break
         }
     }
