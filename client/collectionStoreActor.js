@@ -1,44 +1,7 @@
 import {observable, asMap, asReference} from 'mobx'
 import {T} from './Ticket.js'
 import _ from 'lodash'
-// import {Actor} from './Actor.js'
 import Actor from '../lib/Actor.js'
-
-class DataBase{
-    constructor(){
-        this.collections = {}
-    }
-    add(collection, key, value){
-        console.log('-->', this.collections, collection, key, value)
-        if(collection in this.collections){
-            let collection_ = this.collections[collection]
-            if(key in collection_) {
-                let count = collection_[key].__count + 1
-                value.__count = count
-                //collections[key] = value
-                this.collections[collection][key] = value
-            }else{
-                value.__count = 1
-                this.collections[collection][key] = value // = {[key]: value}
-            }
-        }
-        else{
-            value.__count = 1
-            this.collections[collection] = {[key]: value}
-        }
-    }
-    delete(collection, key){
-        console.log('-->', this.collections, collection, key)
-        let data = this.collections[collection][key]
-        data.__count -= 1
-        if(data.__count == 0){
-            delete this.collections[collection][key]
-        }
-    }
-    get(collection, key){
-        return this.collections[collection][key]
-    }
-}
 
 class collectionStoreActor extends Actor{
     constructor() {
@@ -75,9 +38,9 @@ class collectionStoreActor extends Actor{
         }
     }
 
-    subscribe(promise, filter, id, predicate, ...args){
+    subscribe(promise, id, predicate, ...args){
         let ticket = T.getTicket(predicate, args)
-        this.filters[ticket] = filter(...args)
+        //this.filters[ticket] = filter(...args) // creo que se puede qiutar
         this.ticketsCollection[ticket] = this.registered[predicate]
         if (!this.collections[ticket]) {
             this.collections[ticket] = observable(asMap([], asReference))
@@ -113,11 +76,8 @@ class collectionStoreActor extends Actor{
     }
 
     notify(msg){
-        console.log('msg in notify de collection store', msg)
         let collection = this.registered[msg.predicate]
         if(!_.includes([...this.activeTickets], msg.ticket)){
-            console.log([...this.activeTickets], msg.ticket)
-            console.log('return')
             return
         }
         switch(msg.type){
@@ -147,7 +107,6 @@ class collectionStoreActor extends Actor{
     }
 
     update(doc, t){
-        console.log('uupdate en collection store', doc, t)
         doc = doc.newVal
         this.collections[t].set(doc.id, doc)
     }

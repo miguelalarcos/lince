@@ -1,29 +1,33 @@
 import Actor from '../lib/Actor.js'
 
-let todos_filter = (filter) => {
-    return (item) => {
-        if(filter == 'ALL'){
-            return true
-        }else{
-            return filter == 'DONE'? item.done: !item.done
-        }
-    }
-}
-
 class OfflineActor extends Actor{
 
     constructor(){
         super('Offline')
         this.ws = null
         this.ticketFilters = {}
+        this.filters = {}
         this.collections = {}
     }
 
-    subscribe(ticket){
-        this.ticketFilters[ticket] = todos_filter('ALL')
+    register(name, filter){
+        this.filters[name] = filter
     }
 
-    add(key, value){
+    subscribe(ticket, args){
+        let predicate = args.shift()
+        console.log('***', predicate, args)
+        let filter = this.filters[predicate](...args)
+        this.ticketFilters[ticket] = filter
+        for(let key of Object.keys(this.collections)){
+            let doc = this.collections[key]
+            if(filter(doc)){
+                this.ws.tell('dispatch', {ticket, type: 'add', data: {newVal: doc}, predicate: predicate})
+            }
+        }
+    }
+
+    handle(key, value, predicate){
         let oldDoc = this.collections[key] || null
         let newDoc = Object.assign({}, oldDoc, value)
         for(let t of Object.keys(this.ticketFilters)){
@@ -42,24 +46,24 @@ class OfflineActor extends Actor{
     }
 
     send(obj){
-        console.log('*************************', obj)
+        let predicate = obj.args[0]
         switch(obj.type){
             case 'subscribe':
-                this.subscribe(obj.ticket)
+                this.subscribe(obj.ticket, obj.args)
                 this.ws.tell('dispatch', {type: 'ready', ticket: obj.ticket})
                 break
             case 'update':
                 let id = obj.args[1]
                 let doc = obj.args[2]
                 doc.id = id
-                this.add(id, doc)
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
+                this.handle(id, doc, predicate)
                 break
             case 'add':
                 let ret = {type: obj.type, ticket: obj.ticket, data: obj.args[1]}
                 ret.data.id = ':' + obj.ticket
-                this.add(ret.data.id, ret.data)
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: ret.ticket})
+                this.handle(ret.data.id, ret.data, predicate)
                 break
         }
     }
