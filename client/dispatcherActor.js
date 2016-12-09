@@ -14,8 +14,8 @@ class DispatcherActor extends Actor{
 
     rpc(promise, method, ...args){
         let t = T.getTicket()
-        this.ws.tell('send', method, args, t)
         this.promises[t] = promise
+        this.ws.tell('send', method, args, t)
     }
 
     response(msg){

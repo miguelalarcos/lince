@@ -94,7 +94,7 @@ class collectionStoreActor extends Actor{
                 this.update(msg.data, msg.ticket)
                 break
             case 'delete':
-                this.delete(msg.data.id, msg.ticket)
+                this.delete(msg.data.newVal.id, msg.ticket)
                 break
         }
     }
