@@ -1,10 +1,13 @@
 class Ticket{
     constructor(){
-        this.ticket = 1
+        let ticket = localStorage.ticket || '1'
+        this.ticket = ticket
     }
 
     getTicket(){
-        return ''+this.ticket++
+        let ticket = this.ticket
+        localStorage.ticket = '' + (parseInt(ticket) + 1)
+        return ticket
     }
 }
 

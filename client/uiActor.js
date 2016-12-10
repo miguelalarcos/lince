@@ -1,6 +1,5 @@
-// import _ from 'lodash'
 import mbox from 'mobx'
-import {ws} from './webSocketActor'
+import {status, ready} from './status'
 
 class uiActor{
   constructor(){
@@ -10,6 +9,16 @@ class uiActor{
 }
 
 export const ui = new uiActor()
+
+export const LoginMixin = (self) => {
+    return {
+        login: (name) => {
+            ui.dispatcher.ask('rpc', 'login', name).then((response)=>{
+                status.set('logged')
+            })
+        }
+    }
+}
 
 export const LinkMixin = (self) => {
     return {
@@ -53,8 +62,9 @@ export const UImixin = (self) => {
           }
       })
     },
-    subscribePredicate: (filter, id, predicate, args) => {
-      ui.store.ask('subscribe', filter, id, predicate, args).then(({ticket, collection}) => {
+    subscribePredicate: (id, predicate, args) => {
+      ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
+          ready.get()
           self.mapIdTicket[id] = ticket
           if (ui.store.metadata.get(ticket) == 'ready') {
               self.handle(ticket, collection)
@@ -74,7 +84,7 @@ export const UImixin = (self) => {
       self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))
       self.update()
       //self.dispose[ticket] =
-      collection.observe((change) => {
+      collection.observe((change) => { // TODO: no estoy haciendo disponse
         self.updateItems(change)
         self.update()
       })

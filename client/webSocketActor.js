@@ -2,16 +2,25 @@ import {observable} from 'mobx'
 import _ from 'lodash'
 import Actor from '../lib/Actor.js'
 import {encodeDates, decodeDates} from '../lib/encodeDate'
+import {status, ready} from './status'
 
 class WebSocketActor extends Actor{
 
     constructor(){
         super('websocketActor')
         this.on('ready', ()=>this.onInput())
-        this.connected = observable(false)
+        //this.connected = observable(false)
+        //this.ready = observable(false)
         this.dispatcher = null
         this.ws = null
         this.offline = null
+
+        this.pending = []
+        status.observe((ch)=>{
+            if(ch.newValue == 'logged'){
+                this.sendPending()
+            }
+        })
 
         //this.connect()
     }
@@ -30,7 +39,9 @@ class WebSocketActor extends Actor{
 
     onClose(evt){
         console.log(evt)
-        this.connected.set(false)
+        //this.connected.set(false)
+        //this.ready.set(false)
+        status.set('disconnected')
         //setTimeout(()=>this.connect()
         //    ,5000)
     }
@@ -47,17 +58,29 @@ class WebSocketActor extends Actor{
             this.store.notify(obj) // tell?
         }
         else{
+            this.pending.shift() // se supone que no es necesario contrastar ticket
             this.dispatcher.response(obj) //tell?
         }
     }
 
     onOpen(){
-        this.connected.set(true)
+        //this.connected.set(true)
+        this.offline.clear()
+        status.set('connected')
         this.emit('ready')
     }
 
+    sendPending(){
+        for(let p of this.pending){
+            let {path, args} = encodeDates(p.args)
+            this.ws.send(JSON.stringify({type: p.type, args, ticket: p.ticket, dates: path}))
+        }
+        status.set('ready')
+    }
+
     send(type, args, ticket){
-        if(this.connected.get()) {
+        this.pending.push({type, args, ticket})
+        if(ready.get()) {
             let {path, obj} = encodeDates(args)
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
         }else{

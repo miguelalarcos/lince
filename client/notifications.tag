@@ -1,6 +1,7 @@
 import {ws} from 'lince/client/webSocketActor.js'
 import _ from 'lodash'
 import {dispatcher} from 'lince/client/dispatcherActor.js'
+import {status, ready} from 'lince/client/status.js'
 
 <notifications>
     <div class="notification-bar">
@@ -70,11 +71,11 @@ import {dispatcher} from 'lince/client/dispatcherActor.js'
                     this.log('log', value)
                 })
 
-                ws.connected.observe((ch)=>{
+                status.observe((ch)=>{
                     let value = ch
-                    if(value){
+                    if(value == 'connected'){
                         this.success('connected')
-                    }else{
+                    }else if(value == 'disconnected'){
                         this.error('disconnected')
                     }
                 })

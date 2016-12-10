@@ -1,6 +1,6 @@
 <date-input>
     <div onclick={toggleShow}>{value}</div>
-        <div if={show}>
+        <!--<div if={show}>-->
             <table>
                 <tr each={week in weeks()}>
                     <td each={day in calendarWeek(week)}>
@@ -8,12 +8,11 @@
                     </td>
                 </tr>
             </table>
-        </div>
+        <!--</div>-->
     </div>
 
     <script>
         import moment from 'moment'
-        import range from 'moment-range'
         import {LinkMixin} from './uiActor.js'
 
         this.mixin(LinkMixin(this))
@@ -49,11 +48,10 @@
             }
             let end = ini.clone().add(6, 'days')
 
-            let range = moment().range(ini, end)
-            range.by('day', (m) => {
-                let decoration
-                if(ini_month.format('MM') == m.format('MM')){
-                    if(m.isSame(moment().startOf('day'))){
+            let decoration
+            while(ini.isBefore(end)){
+                if(ini_month.format('MM') == ini.format('MM')){
+                    if(ini.isSame(moment().startOf('day'))){
                         decoration = 'calendar-day calendar-today'
                     }else{
                         decoration = 'calendar-day calendar-day-in-month'
@@ -61,8 +59,9 @@
                 }else{
                     decoration = 'calendar-day calendar-day-not-in-month'
                 }
-                ret.push({value: m.format('DD'), date: m, decoration})
-            })
+                ret.push({value: ini.format('DD'), date: ini.clone(), decoration})
+                ini.add(1, 'd')
+            }
             return ret
         }
 

@@ -14,6 +14,10 @@ class OfflineActor extends Actor{
         this.filters[name] = filter
     }
 
+    clear(){
+        this.collections = []
+    }
+
     subscribe(ticket, args){
         let predicate = args.shift()
         console.log('***', predicate, args)
