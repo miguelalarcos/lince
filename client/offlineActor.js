@@ -1,4 +1,5 @@
 import Actor from '../lib/Actor.js'
+import {store} from './collectionStoreActor'
 
 class OfflineActor extends Actor{
 
@@ -15,24 +16,29 @@ class OfflineActor extends Actor{
     }
 
     clear(){
-        this.collections = []
+        this.collections = {}
     }
 
     subscribe(ticket, args){
         let predicate = args.shift()
+        let collection = store.getCollection(predicate)
+
         console.log('***', predicate, args)
         let filter = this.filters[predicate](...args)
         this.ticketFilters[ticket] = filter
-        for(let key of Object.keys(this.collections)){
-            let doc = this.collections[key]
+        for(let key of Object.keys(this.collections[collection])){
+            let doc = this.collections[collection][key]
             if(filter(doc)){
                 this.ws.tell('dispatch', {ticket, type: 'add', data: {newVal: doc}, predicate: predicate})
             }
         }
     }
 
-    handle(key, value, predicate){
-        let oldDoc = this.collections[key] || null
+    handle(key, value, collection){
+        if(!this.collections[collection]){
+            this.collections[collection] = {}
+        }
+        let oldDoc = this.collections[collection][key] || null
         let newDoc = Object.assign({}, oldDoc, value)
         for(let t of Object.keys(this.ticketFilters)){
             let filter = this.ticketFilters[t]
@@ -46,11 +52,11 @@ class OfflineActor extends Actor{
             }
             this.ws.tell('dispatch', {ticket: parseInt(t), type, data: {newVal: newDoc}, predicate: 'todos'})
         }
-        this.collections[key] = newDoc
+        this.collections[collection][key] = newDoc
     }
 
     send(obj){
-        let predicate = obj.args[0]
+        let collection = obj.args[0]
         switch(obj.type){
             case 'subscribe':
                 this.subscribe(obj.ticket, obj.args)
@@ -61,13 +67,13 @@ class OfflineActor extends Actor{
                 let doc = obj.args[2]
                 doc.id = id
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
-                this.handle(id, doc, predicate)
+                this.handle(id, doc, collection)
                 break
             case 'add':
                 let ret = {type: obj.type, ticket: obj.ticket, data: obj.args[1]}
                 ret.data.id = ':' + obj.ticket
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: ret.ticket})
-                this.handle(ret.data.id, ret.data, predicate)
+                this.handle(ret.data.id, ret.data, collection)
                 break
         }
     }
