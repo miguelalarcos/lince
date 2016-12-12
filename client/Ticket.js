@@ -1,13 +1,16 @@
 class Ticket{
     constructor(){
-        let ticket = localStorage.ticket || '1'
-        this.ticket = ticket
+        let pending = localStorageGetPending()
+        let last = _.last(pending)
+        this.ticket = last && (last.ticket +1) || 0
     }
 
     getTicket(){
-        let ticket = this.ticket
-        localStorage.ticket = '' + (parseInt(ticket) + 1)
-        return ticket
+        return this.ticket++
+    }
+
+    setTicket(value){
+        this.ticket = value
     }
 }
 

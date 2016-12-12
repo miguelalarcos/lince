@@ -44,7 +44,7 @@ class OfflineActor extends Actor{
             }else{
                 type = 'update'
             }
-            this.ws.tell('dispatch', {ticket: t, type, data: {newVal: newDoc}, predicate: 'todos'})
+            this.ws.tell('dispatch', {ticket: parseInt(t), type, data: {newVal: newDoc}, predicate: 'todos'})
         }
         this.collections[key] = newDoc
     }

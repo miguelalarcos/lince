@@ -13,7 +13,7 @@ class DispatcherActor extends Actor{
     }
 
     rpc(promise, method, ...args){
-        let t = T.getTicket()
+        let t = (method == 'login'? null: T.getTicket())
         this.promises[t] = promise
         this.ws.tell('send', method, args, t)
     }

@@ -4,6 +4,8 @@ Actor = require('../lib/Actor.js')
 encodeDates = require('../lib/encodeDateServer').encodeDates
 decodeDates = require('../lib/encodeDateServer').decodeDates
 
+loginLastTicket = {}
+
 class Controller extends Actor{
     constructor(ws, conn){
         super()
@@ -16,9 +18,17 @@ class Controller extends Actor{
     async_notify(msg, done){
         msg = JSON.parse(msg)
         msg.args = decodeDates(msg.args, msg.dates)
-        if(msg.ticket > Controller.lastTicket) {
+        //if(msg.type == 'login' || msg.ticket > Controller.lastTicket) {
+        if(msg.type == 'login' || msg.ticket > loginLastTicket[this.userId]){
             console.log('async_notify', msg)
-            if (msg.type == 'subscribe') {
+            if(msg.type == 'login'){
+                this.userId = msg.args[0]
+                if(msg.args[1] == 0){
+                    loginLastTicket[this.userId] = 0
+                }
+                done()
+            }
+            else if (msg.type == 'subscribe') {
                 this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
             } else if (msg.type == 'unsubscribe') {
                 this.handle_unsubscribe(msg.ticket, done)
@@ -40,7 +50,8 @@ class Controller extends Actor{
             ret.dates = path
             ret.data = obj
             this.ws.send(JSON.stringify(ret))
-            Controller.lastTicket = ticket
+            loginLastTicket[this.userId] = ticket
+            //Controller.lastTicket = ticket
             done()
         })
     }
@@ -51,7 +62,8 @@ class Controller extends Actor{
             this.cursors[ticket].close()
             delete this.cursors[ticket]
         }
-        Controller.lastTicket = ticket
+        loginLastTicket[this.userId] = ticket
+        //Controller.lastTicket = ticket
         done()
     }
 
@@ -102,7 +114,8 @@ class Controller extends Actor{
                         }
                     }
                 )
-                Controller.lastTicket = ticket
+                loginLastTicket[this.userId] = ticket
+                //Controller.lastTicket = ticket
                 done()
                 // cursor.on('data', (change) => {ret.data=change; this.ws.send(JSON.stringify(ret))})
             })
@@ -205,12 +218,6 @@ class Controller extends Actor{
         })
     }
 
-    rpc_login(userId, callback){
-        this.userId = userId
-        this.roles = ['A', 'B']
-        callback(true)
-    }
-
     get(collection, id, callback=null){
         if(callback) {
             r.table(collection).get(id).run(this.conn).then((doc) => callback(doc))
@@ -226,7 +233,5 @@ class Controller extends Actor{
         }
         console.log('close')}
 }
-
-Controller.lastTicket = -1
 
 module.exports.Controller = Controller

@@ -1,5 +1,7 @@
 import mbox from 'mobx'
 import {status, ready} from './status'
+import {T} from './Ticket'
+import {localStorageGetPending} from '../lib/localStorageUtil'
 
 class uiActor{
   constructor(){
@@ -13,7 +15,9 @@ export const ui = new uiActor()
 export const LoginMixin = (self) => {
     return {
         login: (name) => {
-            ui.dispatcher.ask('rpc', 'login', name).then((response)=>{
+            let pending = localStorageGetPending()
+            let ticket = pending.length > 0 ? null: 0
+            ui.dispatcher.ask('rpc', 'login', name, ticket).then((response)=>{
                 status.set('logged')
             })
         }

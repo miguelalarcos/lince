@@ -3,6 +3,7 @@ import _ from 'lodash'
 import Actor from '../lib/Actor.js'
 import {encodeDates, decodeDates} from '../lib/encodeDate'
 import {status, ready} from './status'
+import {localStorageShiftPending, localStoragePushPending, localStorageGetPending} from '../lib/localStorageUtil'
 
 class WebSocketActor extends Actor{
 
@@ -15,12 +16,19 @@ class WebSocketActor extends Actor{
         this.ws = null
         this.offline = null
 
-        this.pending = []
+        //this.pending = []
+        if(!localStorage.pending) {
+            localStorage.pending = JSON.stringify([])
+        }
         status.observe((ch)=>{
             if(ch.newValue == 'logged'){
                 this.sendPending()
             }
         })
+
+        for(p of localStorageGetPending()) {
+            this.offline.tell('send', {type: p.type, args: p.args, ticket: p.ticket})
+        }
 
         //this.connect()
     }
@@ -58,7 +66,8 @@ class WebSocketActor extends Actor{
             this.store.notify(obj) // tell?
         }
         else{
-            this.pending.shift() // se supone que no es necesario contrastar ticket
+            localStorageShiftPending()
+            //this.pending.shift() // se supone que no es necesario contrastar ticket
             this.dispatcher.response(obj) //tell?
         }
     }
@@ -79,7 +88,8 @@ class WebSocketActor extends Actor{
     }
 
     send(type, args, ticket){
-        this.pending.push({type, args, ticket})
+        //this.pending.push({type, args, ticket})
+        localStoragePushPending({type, args, ticket})
         if(ready.get()) {
             let {path, obj} = encodeDates(args)
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
