@@ -17,9 +17,9 @@ class WebSocketActor extends Actor{
         this.offline = null
 
         //this.pending = []
-        if(!localStorage.pending) {
-            localStorage.pending = JSON.stringify([])
-        }
+        //if(!localStorage.pending) {
+        //    localStorage.pending = JSON.stringify([])
+        //}
         status.observe((ch)=>{
             if(ch.newValue == 'logged'){
                 this.sendPending()
