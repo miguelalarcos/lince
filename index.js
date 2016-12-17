@@ -13,3 +13,5 @@ dispatcher.store = store
 store.ws = ws
 ws.offline = offline
 offline.ws = ws
+
+ws.start()

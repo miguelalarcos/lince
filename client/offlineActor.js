@@ -4,7 +4,7 @@ import {store} from './collectionStoreActor'
 class OfflineActor extends Actor{
 
     constructor(){
-        super('Offline')
+        super('Offline2')
         this.ws = null
         this.ticketFilters = {}
         this.filters = {}
@@ -23,7 +23,10 @@ class OfflineActor extends Actor{
         let predicate = args.shift()
         let collection = store.getCollection(predicate)
 
-        console.log('***', predicate, args)
+        if(!this.collections[collection]){
+            this.collections[collection] = {}
+        }
+
         let filter = this.filters[predicate](...args)
         this.ticketFilters[ticket] = filter
         for(let key of Object.keys(this.collections[collection])){

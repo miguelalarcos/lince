@@ -26,7 +26,15 @@ class WebSocketActor extends Actor{
             }
         })
 
-        for(p of localStorageGetPending()) {
+        //for(let p of localStorageGetPending()) {
+        //    this.offline.tell('send', {type: p.type, args: p.args, ticket: p.ticket})
+        //}
+
+        //this.connect()
+    }
+
+    start(){
+        for(let p of localStorageGetPending()) {
             this.offline.tell('send', {type: p.type, args: p.args, ticket: p.ticket})
         }
 

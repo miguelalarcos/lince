@@ -1,3 +1,6 @@
+import {localStorageGetPending} from '../lib/localStorageUtil'
+import _ from 'lodash'
+
 class Ticket{
     constructor(){
         let pending = localStorageGetPending()

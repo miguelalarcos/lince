@@ -42,7 +42,8 @@ export const FormMixin = (self) => {
             self.dirty = false
             }
         },
-        initForm: (attrs, validation)=>{
+        initForm: (collection, attrs, validation)=>{
+            self.collection = collection
             self.attrs = attrs
             self.enabled = false
             self.validFlags = {}
