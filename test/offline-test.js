@@ -20,8 +20,6 @@ import simple from 'simple-mock'
 import chai from 'chai'
 let expect = chai.expect
 
-offline.ws = ws
-
 store.register('todos', 'todos')
 
 let todos_filter = (filter) => {
@@ -33,37 +31,10 @@ let todos_filter = (filter) => {
         }
     }
 }
+
 offline.register('todos', todos_filter)
 
 describe('test offline', function() {
-    it('should call tell', function() {
-        simple.mock(ws, 'tell')
-        offline.subscribe('0', ['todos', 'ALL'])
-        offline.handle({id: '0', desc: 'hacer x', done: false}, 'todos')
-        let ret = ["dispatch", {
-                    data: {
-                        newVal: {
-                            id: '0',
-                            desc: 'hacer x',
-                            done: false
-                        }
-                    },
-                    predicate: "todos",
-                    ticket: 0,
-                    type: "add"
-                    }
-                ]
-
-        expect(ws.tell.lastCall.args).to.eql(ret)
-    })
-
-    it('should not call tell', function() {
-        simple.mock(ws, 'tell')
-        offline.subscribe('0', ['todos', 'DONE'])
-        offline.handle({id: '0', desc: 'hacer x', done: false}, 'todos')
-
-        expect(ws.tell.lastCall.args).to.eql([])
-    })
 
     it('test update in and out', ()=>{
         simple.mock(ws, 'tell')
@@ -118,14 +89,28 @@ describe('test offline', function() {
         expect(ws.tell.calls[4].args).to.eql(["dispatch",
             {
                 data: {
-                    newVal: {
-                        desc: "hacer x",
-                        done: true,
-                        id: ":2"
-                    }
+                    id: ":2"
                 },
                 predicate: "todos",
                 ticket: 1,
+                type: "delete"
+            }
+        ])
+
+        offline.send({type: 'delete', ticket: 4, args: ['todos', ":2"]})
+        expect(ws.tell.calls[5].args).to.eql(["dispatch", {
+                "data": 1,
+                "ticket": 4,
+                "type": "rpc"
+            }]
+        )
+        expect(ws.tell.calls[6].args).to.eql(["dispatch",
+            {
+                data: {
+                    id: ":2"
+                },
+                predicate: "todos",
+                ticket: 0,
                 type: "delete"
             }
         ])

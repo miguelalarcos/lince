@@ -41,23 +41,31 @@ class OfflineActor extends Actor{
         }
     }
 
-    handle(doc, collection){
+    handle(type, doc, collection){
         if(!this.collections[collection]){
             this.collections[collection] = {}
         }
         let oldDoc = this.collections[collection][doc.id] || null
-        let newDoc = Object.assign({}, oldDoc, doc)
+        let newDoc
+        if(type == 'add' || type == 'update') {
+            newDoc = Object.assign({}, oldDoc, doc)
+        }
+        else {
+            newDoc = null
+        }
+
         for(let t of Object.keys(this.ticketFilters)){
             let {filter, predicate} = this.ticketFilters[t]
+            let filter_ = (item) => item && filter(item)
             let type = null
-            if((!oldDoc || !filter(oldDoc)) && filter(newDoc)){
+            if(!filter_(oldDoc) && filter_(newDoc)){
                 type = 'add'
-            }else if(oldDoc && filter(oldDoc) && !filter(newDoc)){
+                this.ws.tell('dispatch', {ticket: parseInt(t), type, data: {newVal: newDoc}, predicate})
+            }else if(filter_(oldDoc) && !filter_(newDoc)){
                 type = 'delete'
-            }else if(oldDoc && filter(oldDoc) && filter(newDoc)){
+                this.ws.tell('dispatch', {ticket: parseInt(t), type, data: {id: oldDoc.id}, predicate})
+            }else if(filter_(oldDoc) && filter_(newDoc)){
                 type = 'update'
-            }
-            if(type) {
                 this.ws.tell('dispatch', {ticket: parseInt(t), type, data: {newVal: newDoc}, predicate})
             }
         }
@@ -66,6 +74,7 @@ class OfflineActor extends Actor{
 
     send(obj){
         let collection = obj.args[0]
+        let id
         switch(obj.type){
             case 'unsubscribe':
                 this.unsubscribe(obj.ticket)
@@ -74,18 +83,23 @@ class OfflineActor extends Actor{
                 this.subscribe(obj.ticket, obj.args)
                 this.ws.tell('dispatch', {type: 'ready', ticket: obj.ticket})
                 break
+            case 'delete':
+                id = obj.args[1]
+                this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
+                this.handle('delete', {id}, collection)
+                break
             case 'update':
-                let id = obj.args[1]
+                id = obj.args[1]
                 let doc = obj.args[2]
                 doc.id = id
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
-                this.handle(doc, collection)
+                this.handle('update', doc, collection)
                 break
             case 'add':
                 let ret = {type: obj.type, ticket: obj.ticket, data: obj.args[1]}
                 ret.data.id = ':' + obj.ticket
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: ret.ticket})
-                this.handle(ret.data, collection)
+                this.handle('add', ret.data, collection)
                 break
         }
     }

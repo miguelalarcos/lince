@@ -1,10 +1,11 @@
-r = require('rethinkdb')
-Q = require('q')
-Actor = require('../lib/Actor.js')
-encodeDates = require('../lib/encodeDateServer').encodeDates
-decodeDates = require('../lib/encodeDateServer').decodeDates
+let r = require('rethinkdb')
+let Q = require('q')
+let Actor = require('../lib/Actor.js')
+const encodeDates = require('../lib/encodeDateServer').encodeDates
+const decodeDates = require('../lib/encodeDateServer').decodeDates
+const _ = require('lodash')
 
-loginLastTicket = {}
+let loginLastTicket = {}
 
 class Controller extends Actor{
     constructor(ws, conn){
@@ -142,7 +143,7 @@ class Controller extends Actor{
     }
 
     match(doc, pattern){
-        if(pattern == {}){
+        if(_.isEmpty(pattern)){
             return true
         }
         let flag = false
@@ -157,10 +158,15 @@ class Controller extends Actor{
         return flag
     }
 
+    getRules(type, collection){
+        return r.table('rules').filter({type, collection}).toArray()
+    }
+
     can(type, collection, doc){
-        return Q(true)
+        //return Q(true)
         let can = false
-        return r.table('rules').filter({type, collection}).toArray().then((results)=>{
+        //return r.table('rules').filter({type, collection}).toArray().then((results)=>{
+        return this.getRules(type, collection).then((results)=>{
             for(let r of results){
                 if(this.match(doc, r.pattern) && !this.hasRole(r.role)){
                     can = false
