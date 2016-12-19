@@ -1,6 +1,6 @@
-let r = require('rethinkdb')
-let Q = require('q')
-let Actor = require('../lib/Actor.js')
+const r = require('rethinkdb')
+const Q = require('q')
+const Actor = require('../lib/Actor.js')
 const encodeDates = require('../lib/encodeDateServer').encodeDates
 const decodeDates = require('../lib/encodeDateServer').decodeDates
 const _ = require('lodash')
@@ -19,22 +19,18 @@ class Controller extends Actor{
     async_notify(msg, done){
         msg = JSON.parse(msg)
         msg.args = decodeDates(msg.args, msg.dates)
-        //if(msg.type == 'login' || msg.ticket > Controller.lastTicket) {
         if(msg.type == 'login' || msg.ticket > loginLastTicket[this.userId]){
-            console.log('async_notify', msg)
             if(msg.type == 'login'){
                 this.userId = msg.args[0]
                 if(msg.args[1] == 0){
                     loginLastTicket[this.userId] = 0
                 }
                 done()
-            }
-            else if (msg.type == 'subscribe') {
+            }else if (msg.type == 'subscribe') {
                 this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
-            } else if (msg.type == 'unsubscribe') {
+            }else if (msg.type == 'unsubscribe') {
                 this.handle_unsubscribe(msg.ticket, done)
-            }
-            else {
+            }else{
                 this.handle_rpc(msg.type, msg.args, msg.ticket, done)
             }
         }else{
@@ -44,17 +40,19 @@ class Controller extends Actor{
     handle_rpc(command, args, ticket, done){
         console.log('rpc', command, args, ticket)
         let ret = {ticket: ticket, type: 'rpc'}
-        Q(this['rpc_' + command](...args)).then((val)=>{
-            //ret.data=val
-            console.log('-------------------------(a)', val)
-            let {path, obj} = encodeDates(val)
-            ret.dates = path
-            ret.data = obj
-            this.ws.send(JSON.stringify(ret))
-            loginLastTicket[this.userId] = ticket
-            //Controller.lastTicket = ticket
+        let method = this['rpc_' + command].bind(this, ...args)
+        if(method) {
+            return Q(method()).then((val) => {
+                let {path, obj} = encodeDates(val)
+                ret.dates = path
+                ret.data = obj
+                this.ws.send(JSON.stringify(ret))
+                loginLastTicket[this.userId] = ticket
+                done()
+            })
+        }else{
             done()
-        })
+        }
     }
 
     handle_unsubscribe(ticket, done){
@@ -73,7 +71,7 @@ class Controller extends Actor{
         args = args || []
         let ret = {ticket: ticket, type: 'subscribe'}
         //let pred = this['subs_' + predicate](...args)
-        Q(this['subs_' + predicate](...args)).then((pred)=> {
+        this['subs_' + predicate] && Q(this['subs_' + predicate](...args)).then((pred)=> {
             pred && pred.changes({includeInitial: true, includeStates: true}).run(this.conn, (err, cursor) => {
                 this.cursors[ticket] = cursor
                 cursor.each((err, data) => {
@@ -123,20 +121,22 @@ class Controller extends Actor{
         })
     }
 
-    rpc_add(collection, doc, callback){
-        this.can('add', collection, doc).then((can)=>{
+    add(collection, doc){
+        return r.table(collection).insert(doc).run(this.conn)
+    }
+
+    rpc_add(collection, doc){
+        return this.can('add', collection, doc).then((can)=>{
             if(can) {
                 doc = this.beforeAdd(collection, doc)
-                r.table(collection).insert(doc).run(this.conn).then((doc) => callback(doc.generated_keys[0]))
+                return this.add(collection, doc).then((doc) => {
+                    return doc.generated_keys[0]
+                })
             }else{
-                callback(0)
+                return 0
             }
         })
     }
-
-    //_update(collection, id, doc, callback){
-    //    r.table(collection).get(id).update(doc).run(this.conn).then((doc)=>callback(doc.replaced))
-    //}
 
     hasRole(role){
         return _.includes(this.roles, role)
@@ -163,9 +163,7 @@ class Controller extends Actor{
     }
 
     can(type, collection, doc){
-        //return Q(true)
         let can = false
-        //return r.table('rules').filter({type, collection}).toArray().then((results)=>{
         return this.getRules(type, collection).then((results)=>{
             for(let r of results){
                 if(this.match(doc, r.pattern) && !this.hasRole(r.role)){
@@ -188,12 +186,18 @@ class Controller extends Actor{
         return doc
     }
 
+    update(collection, id, doc){
+        return r.table(collection).get(id).update(doc).run(this.conn)
+    }
+
     rpc_update(collection, id, doc){
+        console.log(collection, id, doc)
         let oldDoc
         return this.get(collection, id).then((old)=>{
             oldDoc = old
             return this.can('update', collection, oldDoc)
         }).then((can)=>{
+            console.log('can:', can)
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
                 return this.can('insert', collection, newDoc)
@@ -203,7 +207,7 @@ class Controller extends Actor{
         }).then((can)=>{
             if(can){
                 doc = this.beforeUpdate(collection, doc)
-                return r.table(collection).get(id).update(doc).run(this.conn).then((doc)=>{
+                this.update(collection, id, doc).then((doc)=>{
                     return doc.replaced
                 })
             }else{
@@ -212,14 +216,16 @@ class Controller extends Actor{
         })
     }
 
-    rpc_delete(collection, id, callback){
+    rpc_delete(collection, id){
         this.get(collection, id).then((oldDoc)=>{
             return this.can('delete', collection, oldDoc)
         }).then((can)=>{
             if(can){
-                r.table(collection).get(id).delete().run(this.conn).then((doc)=>callback(doc.deleted))
+                return r.table(collection).get(id).delete().run(this.conn).then((doc)=>{
+                    return doc.deleted
+                })
             }else{
-                callback(0)
+                return 0
             }
         })
     }
