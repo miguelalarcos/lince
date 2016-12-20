@@ -40,9 +40,8 @@ class Controller extends Actor{
     handle_rpc(command, args, ticket, done){
         console.log('rpc', command, args, ticket)
         let ret = {ticket: ticket, type: 'rpc'}
-        let method = this['rpc_' + command].bind(this, ...args)
-        if(method) {
-            return Q(method()).then((val) => {
+        if(this['rpc_' + command]) {
+            return Q(this['rpc_' + command](...args)).then((val) => {
                 let {path, obj} = encodeDates(val)
                 ret.dates = path
                 ret.data = obj
@@ -121,12 +120,16 @@ class Controller extends Actor{
         })
     }
 
+    check(collection, doc){
+        return true
+    }
+
     add(collection, doc){
         return r.table(collection).insert(doc).run(this.conn)
     }
 
     rpc_add(collection, doc){
-        return this.can('add', collection, doc).then((can)=>{
+        return this.check(collection, doc) && this.can('add', collection, doc).then((can)=>{
             if(can) {
                 doc = this.beforeAdd(collection, doc)
                 return this.add(collection, doc).then((doc) => {
@@ -191,16 +194,14 @@ class Controller extends Actor{
     }
 
     rpc_update(collection, id, doc){
-        console.log(collection, id, doc)
         let oldDoc
         return this.get(collection, id).then((old)=>{
             oldDoc = old
             return this.can('update', collection, oldDoc)
         }).then((can)=>{
-            console.log('can:', can)
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
-                return this.can('insert', collection, newDoc)
+                return this.check(collection, newDoc) && this.can('insert', collection, newDoc)
             }else{
                 return false
             }
@@ -216,12 +217,16 @@ class Controller extends Actor{
         })
     }
 
+    delete(collection, id){
+        return r.table(collection).get(id).delete().run(this.conn)
+    }
+
     rpc_delete(collection, id){
         this.get(collection, id).then((oldDoc)=>{
             return this.can('delete', collection, oldDoc)
         }).then((can)=>{
             if(can){
-                return r.table(collection).get(id).delete().run(this.conn).then((doc)=>{
+                this.delete(collection, id).then((doc)=>{
                     return doc.deleted
                 })
             }else{
@@ -230,13 +235,15 @@ class Controller extends Actor{
         })
     }
 
-    get(collection, id, callback=null){
-        if(callback) {
+    get(collection, id){
+        return r.table(collection).get(id).run(this.conn)
+        /*if(callback) {
             r.table(collection).get(id).run(this.conn).then((doc) => callback(doc))
         }
         else {
             return r.table(collection).get(id).run(this.conn) // return ?
         }
+        */
     }
 
     close(){

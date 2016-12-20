@@ -34,8 +34,8 @@ class WebSocketActor extends Actor{
     }
 
     start(){
-        for(let p of localStorageGetPending()) {
-            this.offline.tell('send', {type: p.type, args: p.args, ticket: p.ticket})
+        for(let {type, args, ticket} of localStorageGetPending()) {
+            this.offline.tell('send', {type, args, ticket})
         }
 
         //this.connect()
@@ -51,6 +51,10 @@ class WebSocketActor extends Actor{
 
     onError(evt){
         console.log(evt)
+    }
+
+    close(){
+        this.ws.close()
     }
 
     onClose(evt){
