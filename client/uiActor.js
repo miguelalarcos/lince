@@ -68,6 +68,7 @@ export const UImixin = (self) => {
     },
     subscribePredicate: (id, predicate, args) => {
       ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
+          console.log('subscribePredicate', id, predicate, args, ready.get())
           ready.get()
           self.mapIdTicket[id] = ticket
           if (ui.store.metadata.get(ticket) == 'ready') {

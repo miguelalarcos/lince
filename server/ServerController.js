@@ -5,7 +5,7 @@ const encodeDates = require('../lib/encodeDateServer').encodeDates
 const decodeDates = require('../lib/encodeDateServer').decodeDates
 const _ = require('lodash')
 
-let loginLastTicket = {}
+let loginLastTicket = {'miguel': -1}
 
 class Controller extends Actor{
     constructor(ws, conn){
@@ -13,20 +13,33 @@ class Controller extends Actor{
         this.ws = ws
         this.conn = conn
         this.cursors = {}
-        this.userId = null
+        this.userId = 'miguel'
         this.roles = ['A', 'B']
     }
     async_notify(msg, done){
+        console.log(1, msg)
         msg = JSON.parse(msg)
+        console.log(2, msg)
+        if(!_.isArray(msg.args) || !_.isArray(msg.dates) || !_.isString(msg.type) || !_.isInteger(msg.ticket)){
+            console.log('return')
+            console.log('done')
+            done()
+            return
+        }
+        console.log(3)
         msg.args = decodeDates(msg.args, msg.dates)
+        console.log(4)
         if(msg.type == 'login' || msg.ticket > loginLastTicket[this.userId]){
+            console.log('paso')
             if(msg.type == 'login'){
                 this.userId = msg.args[0]
                 if(msg.args[1] == 0){
                     loginLastTicket[this.userId] = 0
                 }
+                console.log('done')
                 done()
             }else if (msg.type == 'subscribe') {
+                console.log('=>', msg.args)
                 this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
             }else if (msg.type == 'unsubscribe') {
                 this.handle_unsubscribe(msg.ticket, done)
@@ -34,6 +47,8 @@ class Controller extends Actor{
                 this.handle_rpc(msg.type, msg.args, msg.ticket, done)
             }
         }else{
+            console.log('no se que pasa', msg.ticket, loginLastTicket[this.userId])
+            console.log('done')
             done()
         }
     }
@@ -47,9 +62,11 @@ class Controller extends Actor{
                 ret.data = obj
                 this.ws.send(JSON.stringify(ret))
                 loginLastTicket[this.userId] = ticket
+                console.log('done')
                 done()
             })
         }else{
+            console.log('done')
             done()
         }
     }
@@ -62,6 +79,7 @@ class Controller extends Actor{
         }
         loginLastTicket[this.userId] = ticket
         //Controller.lastTicket = ticket
+        console.log('done')
         done()
     }
 
@@ -71,7 +89,9 @@ class Controller extends Actor{
         let ret = {ticket: ticket, type: 'subscribe'}
         //let pred = this['subs_' + predicate](...args)
         this['subs_' + predicate] && Q(this['subs_' + predicate](...args)).then((pred)=> {
+            console.log('pred:', pred)
             pred && pred.changes({includeInitial: true, includeStates: true}).run(this.conn, (err, cursor) => {
+                console.log('dentro de pred')
                 this.cursors[ticket] = cursor
                 cursor.each((err, data) => {
                         if (err) {
@@ -79,7 +99,7 @@ class Controller extends Actor{
                         } else {
                             if (data.state) {
                                 data = {type: data.state, ticket: ticket, dates: []}
-                                //console.log('feed', data)
+                                console.log('feed', data)
                                 this.ws.send(JSON.stringify(data))
                             } else {
                                 let type
@@ -114,6 +134,7 @@ class Controller extends Actor{
                 )
                 loginLastTicket[this.userId] = ticket
                 //Controller.lastTicket = ticket
+                console.log('done')
                 done()
                 // cursor.on('data', (change) => {ret.data=change; this.ws.send(JSON.stringify(ret))})
             })

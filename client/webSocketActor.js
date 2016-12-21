@@ -88,11 +88,12 @@ class WebSocketActor extends Actor{
         //this.connected.set(true)
         this.offline.clear()
         status.set('connected')
+        this.sendPending()
         this.emit('ready')
     }
 
     sendPending(){
-        for(let p of this.pending){
+        for(let p of localStorageGetPending()){
             let {path, args} = encodeDates(p.args)
             this.ws.send(JSON.stringify({type: p.type, args, ticket: p.ticket, dates: path}))
         }
@@ -101,9 +102,11 @@ class WebSocketActor extends Actor{
 
     send(type, args, ticket){
         //this.pending.push({type, args, ticket})
+        // only add update and delete should go to pending
         localStoragePushPending({type, args, ticket})
         if(ready.get()) {
             let {path, obj} = encodeDates(args)
+            console.log('send', JSON.stringify({type, args: obj, ticket, dates: path}))
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
         }else{
             this.offline.tell('send', {type, args, ticket})

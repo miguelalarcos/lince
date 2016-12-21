@@ -32,20 +32,25 @@ class ServerActor extends EventEmitter{
     }
 
     start(){
+        console.log('server start')
         // this.ra.conn.observe((conn)=> {
         r.connect().then((conn)=>{
             this.setConnection(conn)
         })
         let self = this
         this.on('conn-ready', (conn)=>{
+            console.log('conn ready')
             this.app.ws('/', function (ws, req) {
+                console.log('client connection done')
                 clients.push(ws)
                 let server = new self.S(ws, conn)
                 ws.on('error', (ev)=>console.log(ev))
                 ws.on('message', function (msg) {
+                    console.log('->', msg)
                     server.tell('async_notify', msg)
                 })
                 ws.on('close', ()=> {
+                    console.log('close')
                     server.tell('close')
                     server = null
                 })
