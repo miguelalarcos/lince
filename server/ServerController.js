@@ -6,6 +6,7 @@ const decodeDates = require('../lib/encodeDateServer').decodeDates
 const _ = require('lodash')
 
 let loginLastTicket = {'miguel': -1}
+let loginLastGeneratedId = {'miguel': -1}
 
 class Controller extends Actor{
     constructor(ws, conn){
@@ -17,29 +18,21 @@ class Controller extends Actor{
         this.roles = ['A', 'B']
     }
     async_notify(msg, done){
-        console.log(1, msg)
         msg = JSON.parse(msg)
-        console.log(2, msg)
         if(!_.isArray(msg.args) || !_.isArray(msg.dates) || !_.isString(msg.type) || !_.isInteger(msg.ticket)){
-            console.log('return')
-            console.log('done')
             done()
             return
         }
-        console.log(3)
         msg.args = decodeDates(msg.args, msg.dates)
-        console.log(4)
-        if(msg.type == 'login' || msg.ticket > loginLastTicket[this.userId]){
-            console.log('paso')
-            if(msg.type == 'login'){
-                this.userId = msg.args[0]
-                if(msg.args[1] == 0){
-                    loginLastTicket[this.userId] = 0
-                }
-                console.log('done')
-                done()
-            }else if (msg.type == 'subscribe') {
-                console.log('=>', msg.args)
+        if(msg.type == 'login'){
+            this.userId = msg.args[0]
+            if(msg.args[1] == 0){
+                loginLastTicket[this.userId] = 0
+            }
+            done()
+        }
+        else if(msg.ticket > loginLastTicket[this.userId]){
+            if (msg.type == 'subscribe') {
                 this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
             }else if (msg.type == 'unsubscribe') {
                 this.handle_unsubscribe(msg.ticket, done)
@@ -47,26 +40,31 @@ class Controller extends Actor{
                 this.handle_rpc(msg.type, msg.args, msg.ticket, done)
             }
         }else{
-            console.log('no se que pasa', msg.ticket, loginLastTicket[this.userId])
-            console.log('done')
+            let ret = {ticket: msg.ticket, type: 'rpc'}
+            ret.dates = []
+            ret.data = msg.type == 'add' ? loginLastGeneratedId[this.userId] : 1
+            this.ws.send(JSON.stringify(ret))
             done()
         }
     }
     handle_rpc(command, args, ticket, done){
-        console.log('rpc', command, args, ticket)
+        console.log('handle rpc', ticket)
         let ret = {ticket: ticket, type: 'rpc'}
         if(this['rpc_' + command]) {
+            console.log('dentro')
             return Q(this['rpc_' + command](...args)).then((val) => {
+                console.log('val', val)
                 let {path, obj} = encodeDates(val)
                 ret.dates = path
                 ret.data = obj
+                console.log('send rpc reponse', ret)
                 this.ws.send(JSON.stringify(ret))
                 loginLastTicket[this.userId] = ticket
-                console.log('done')
+                done()
+            }).catch((err)=>{
                 done()
             })
         }else{
-            console.log('done')
             done()
         }
     }
@@ -154,6 +152,7 @@ class Controller extends Actor{
             if(can) {
                 doc = this.beforeAdd(collection, doc)
                 return this.add(collection, doc).then((doc) => {
+                    loginLastGeneratedId[this.userId] = doc.generated_keys[0]
                     return doc.generated_keys[0]
                 })
             }else{
@@ -257,6 +256,7 @@ class Controller extends Actor{
     }
 
     get(collection, id){
+        console.log('get', collection, id)
         return r.table(collection).get(id).run(this.conn)
         /*if(callback) {
             r.table(collection).get(id).run(this.conn).then((doc) => callback(doc))

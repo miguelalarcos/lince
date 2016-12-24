@@ -14,4 +14,5 @@ store.ws = ws
 ws.offline = offline
 offline.ws = ws
 
-ws.start()
+//ws.start()
+ws.tell('start')

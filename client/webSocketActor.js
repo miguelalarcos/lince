@@ -3,7 +3,9 @@ import _ from 'lodash'
 import Actor from '../lib/Actor.js'
 import {encodeDates, decodeDates} from '../lib/encodeDate'
 import {status, ready} from './status'
-import {localStorageShiftPending, localStoragePushPending, localStorageGetPending} from '../lib/localStorageUtil'
+import {localStorageShiftAndReplacePending, localStorageGetFirstPending,
+        localStoragePushPending, localStorageGetPending} from '../lib/localStorageUtil'
+import Q from 'q'
 
 class WebSocketActor extends Actor{
 
@@ -15,6 +17,8 @@ class WebSocketActor extends Actor{
         this.dispatcher = null
         this.ws = null
         this.offline = null
+        this.promises = {}
+        //this.mapTicketId = {}
 
         //this.pending = []
         //if(!localStorage.pending) {
@@ -43,9 +47,9 @@ class WebSocketActor extends Actor{
 
     connect(){
         let ws = this.ws = new WebSocket('ws://' + document.location.hostname + ':8000')
-        ws.onopen = (evt) => this.onOpen(evt)
+        ws.onopen = (evt) => this.tell('open') //this.onOpen(evt)
         ws.onerror = (evt) => this.onError(evt)
-        ws.onmessage = (evt) => this.onMessage(evt.data)
+        ws.onmessage = (evt) => this.tell('message', evt.data)//this.onMessage(evt.data)
         ws.onclose = (evt) => this.onClose(evt)
     }
 
@@ -66,38 +70,65 @@ class WebSocketActor extends Actor{
         //    ,5000)
     }
 
-    onMessage(msg){
+    message(msg){
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
 
+        console.log(obj, this.promises)
+        let promise = this.promises[obj.ticket]
+        console.log(promise)
+        if(promise){
+            console.log('dentro de promise')
+            promise.resolve(obj.data)
+            delete this.promises[obj.ticket]
+            console.log('resolved')
+        }
         this.dispatch(obj)
     }
 
+
     dispatch(obj){
         if(_.includes(['add', 'update', 'delete', 'initializing', 'ready'], obj.type)){
-            this.store.notify(obj) // tell?
+            this.store.tell('notify', obj) // tell?
         }
         else{
-            localStorageShiftPending()
-            //this.pending.shift() // se supone que no es necesario contrastar ticket
-            this.dispatcher.response(obj) //tell?
+            //let promise = this.promises[obj.ticket]
+            //if(promise){
+            //    promise.resolve(obj.data)
+            //    delete this.promises[obj.ticket]
+            //    console.log('resolved')
+            //}
+            this.dispatcher.tell('response', obj) //tell?
         }
     }
 
-    onOpen(){
-        //this.connected.set(true)
+    open(){
         this.offline.clear()
+        console.log('connected')
         status.set('connected')
-        this.sendPending()
-        this.emit('ready')
+        this.tell('sendPending')
     }
 
     sendPending(){
-        for(let p of localStorageGetPending()){
-            let {path, args} = encodeDates(p.args)
-            this.ws.send(JSON.stringify({type: p.type, args, ticket: p.ticket, dates: path}))
+        let p = localStorageGetFirstPending()
+        console.log(p)
+        if(p) {
+            let {path, obj} = encodeDates(p.args)
+            this.ws.send(JSON.stringify({type: p.type, args: obj, ticket: p.ticket, dates: path}))
+            let deferred = Q.defer()
+            this.promises[p.ticket] = deferred
+            console.log('promise')
+            deferred.promise.then((id) => {
+                console.log('localStorageShiftAndReplacePending')
+                localStorageShiftAndReplacePending(p.type, p.ticket, id)
+                this.tell('sendPending')
+            })
+            console.log('continue')
+        }else{
+            console.log('ready')
+            status.set('ready')
+            this.emit('ready')
         }
-        status.set('ready')
     }
 
     send(type, args, ticket){
