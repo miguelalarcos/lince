@@ -101,9 +101,9 @@ class collectionStoreActor extends Actor{
 
     add(doc, t){
         doc = doc.newVal
-        let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
+        //let aux = this.collections[t].get(':'+t) || this.collections[t].get(doc.id)
         this.collections[t].set(doc.id, doc)
-        this.collections[t].delete(':'+t)
+        //this.collections[t].delete(':'+t)
     }
 
     update(doc, t){

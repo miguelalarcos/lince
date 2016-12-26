@@ -74,14 +74,10 @@ class WebSocketActor extends Actor{
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
 
-        console.log(obj, this.promises)
         let promise = this.promises[obj.ticket]
-        console.log(promise)
         if(promise){
-            console.log('dentro de promise')
             promise.resolve(obj.data)
             delete this.promises[obj.ticket]
-            console.log('resolved')
         }
         this.dispatch(obj)
     }
@@ -92,12 +88,6 @@ class WebSocketActor extends Actor{
             this.store.tell('notify', obj) // tell?
         }
         else{
-            //let promise = this.promises[obj.ticket]
-            //if(promise){
-            //    promise.resolve(obj.data)
-            //    delete this.promises[obj.ticket]
-            //    console.log('resolved')
-            //}
             this.dispatcher.tell('response', obj) //tell?
         }
     }
@@ -111,30 +101,25 @@ class WebSocketActor extends Actor{
 
     sendPending(){
         let p = localStorageGetFirstPending()
-        console.log(p)
         if(p) {
             let {path, obj} = encodeDates(p.args)
             this.ws.send(JSON.stringify({type: p.type, args: obj, ticket: p.ticket, dates: path}))
             let deferred = Q.defer()
             this.promises[p.ticket] = deferred
-            console.log('promise')
             deferred.promise.then((id) => {
-                console.log('localStorageShiftAndReplacePending')
                 localStorageShiftAndReplacePending(p.type, p.ticket, id)
                 this.tell('sendPending')
             })
-            console.log('continue')
         }else{
-            console.log('ready')
             status.set('ready')
             this.emit('ready')
         }
     }
 
     send(type, args, ticket){
-        //this.pending.push({type, args, ticket})
-        // only add update and delete should go to pending
-        localStoragePushPending({type, args, ticket})
+        if(_.includes(['add', 'update', 'delete'], type)) {
+            localStoragePushPending({type, args, ticket})
+        }
         if(ready.get()) {
             let {path, obj} = encodeDates(args)
             console.log('send', JSON.stringify({type, args: obj, ticket, dates: path}))

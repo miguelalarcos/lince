@@ -11,7 +11,7 @@ export const FormMixin = (self) => {
         id: null,
         beforeAdd: (doc) => doc,
         beforeUpdate: (doc) => doc,
-        afterSave: () => null,
+        //afterSave: () => null,
         save: (evt) => {
             self.enabled = false
             self.dirty = false
@@ -19,24 +19,27 @@ export const FormMixin = (self) => {
             let doc = self.doc.toJS()
             if(id) {
                 doc = self.beforeUpdate(doc)
-                self.dispatcher.ask('rpc', 'update', self.collection, id, doc).then(()=>{
+                return self.dispatcher.ask('rpc', 'update', self.collection, id, doc).then(()=>{
                     self.enabled=true
-                    self.afterSave()
+                    //self.afterSave()
+                    return null
                     //self.update()
                 })
             }else{
                 doc = self.beforeAdd(doc)
-                self.dispatcher.ask('rpc', 'add', self.collection, doc).then((id)=>{
+                return self.dispatcher.ask('rpc', 'add', self.collection, doc).then((id)=>{
                     self.doc.set('id', id)
                     self.dirty = false
                     self.enabled = true
-                    self.afterSave()
+                    //self.afterSave()
+                    return id
                     //self.update()
                 })
             }
-            self.clear()
+            //self.clear()
         },
         clear: ()=>{
+            self.doc.set('id', null)
             for(let attr of self.attrs){
                 self.doc.set(attr, null)
             self.dirty = false
