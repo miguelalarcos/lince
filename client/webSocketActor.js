@@ -94,7 +94,6 @@ class WebSocketActor extends Actor{
 
     open(){
         this.offline.clear()
-        console.log('connected')
         status.set('connected')
         this.tell('sendPending')
     }
@@ -119,6 +118,11 @@ class WebSocketActor extends Actor{
     send(type, args, ticket){
         if(_.includes(['add', 'update', 'delete'], type)) {
             localStoragePushPending({type, args, ticket})
+            let deferred = Q.defer()
+            this.promises[ticket] = deferred
+            deferred.promise.then(() => {
+                localStorageShift()
+            })
         }
         if(ready.get()) {
             let {path, obj} = encodeDates(args)

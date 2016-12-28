@@ -66,7 +66,7 @@ export const UImixin = (self) => {
           }
       })
     },
-    subscribePredicate: (id, predicate, args) => {
+    subscribe: (id, predicate, args) => {
       ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
           console.log('subscribePredicate', id, predicate, args, ready.get())
           ready.get()

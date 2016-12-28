@@ -231,11 +231,15 @@ class Controller extends Actor{
             if(can){
                 doc = this.beforeUpdate(collection, doc)
                 this.update(collection, id, doc).then((doc)=>{
+                    console.log('replaced', doc)
                     return doc.replaced
                 })
             }else{
                 return 0
             }
+        }).catch((err)=>{
+            console.log(err)
+            return 0
         })
     }
 
