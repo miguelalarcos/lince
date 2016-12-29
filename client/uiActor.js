@@ -1,7 +1,6 @@
 import mbox from 'mobx'
-import {status, ready} from './status'
-import {T} from './Ticket'
-import {localStorageGetPending} from '../lib/localStorageUtil'
+import {ready} from './status'
+import _ from 'lodash'
 
 class uiActor{
   constructor(){
@@ -11,18 +10,6 @@ class uiActor{
 }
 
 export const ui = new uiActor()
-
-export const LoginMixin = (self) => {
-    return {
-        login: (name) => {
-            let pending = localStorageGetPending()
-            let ticket = pending.length > 0 ? null: 0
-            ui.dispatcher.ask('rpc', 'login', name, ticket).then((response)=>{
-                status.set('logged')
-            })
-        }
-    }
-}
 
 export const LinkMixin = (self) => {
     return {
@@ -67,26 +54,28 @@ export const UImixin = (self) => {
       })
     },
     subscribe: (id, predicate, args) => {
-      ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
-          console.log('subscribePredicate', id, predicate, args, ready.get())
-          ready.get()
-          self.mapIdTicket[id] = ticket
-          if (ui.store.metadata.get(ticket) == 'ready') {
-              self.handle(ticket, collection)
-          }
-          else {
-              const dispose = ui.store.metadata.observe((change) => {
-                  // if(change.newValue == 'initializing'){self.items = []} else
-                  if (change.name == ticket && change.newValue == 'ready') {
-                      self.handle(ticket, collection)
-                      dispose()
-                  }
-              })
-          }
-      })
+      console.log(ready.get())
+      if(ready.get()) {
+          ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
+              //logged.get()
+              self.mapIdTicket[id] = ticket
+              if (ui.store.metadata.get(ticket) == 'ready') {
+                  self.handle(ticket, collection)
+              }
+              else {
+                  const dispose = ui.store.metadata.observe((change) => {
+                      // if(change.newValue == 'initializing'){self.items = []} else
+                      if (change.name == ticket && change.newValue == 'ready') {
+                          self.handle(ticket, collection)
+                          dispose()
+                      }
+                  })
+              }
+          })
+      }
     },
     handle: (ticket, collection) => {
-      self.items = collection.values() //.filter((x)=> _.includes([...x.tickets], ticket))
+      self.items = _.orderBy(collection.values(), self.orderBy[0], self.orderBy[1])
       self.update()
       //self.dispose[ticket] =
       collection.observe((change) => { // TODO: no estoy haciendo disponse
@@ -104,28 +93,34 @@ export const UImixin = (self) => {
                 break;
             case 'update':
                 doc = change.newValue
-                pos = self.actualIndex(doc)
+                pos = self.actualIndex(doc, self.items)
                 self.items.splice(pos, 1)
                 pos = self.index(doc)
                 self.items.splice(pos, 0, doc)
                 break;
             case 'delete':
                 doc = change.oldValue
-                pos = self.actualIndex(doc)
+                pos = self.actualIndex(doc, self.items)
                 self.items.splice(pos, 1)
                 break;
         }
 
     },
-    actualIndex: (doc) => {
+    actualIndex: (doc, items) => {
         let i = 0
-        for(let elem of self.items){
+        for(let elem of items){
             if(doc.id == elem.id)
                 return i
             i++
         }
     },
     index: (doc) => {
+        let items = [doc, ...self.items]
+        _.orderBy(items, self.orderBy[0], self.orderBy[1])
+        return self.actualIndex(doc, items)
+
+    },
+    _index: (doc) => {
         let i = 0
         for(let elem of self.items){
             let v = self.sortCmp(doc, elem)

@@ -5,8 +5,10 @@ const encodeDates = require('../lib/encodeDateServer').encodeDates
 const decodeDates = require('../lib/encodeDateServer').decodeDates
 const _ = require('lodash')
 
+/* offline
 let loginLastTicket = {'miguel': -1}
 let loginLastGeneratedId = {'miguel': -1}
+*/
 
 class Controller extends Actor{
     constructor(ws, conn){
@@ -14,8 +16,8 @@ class Controller extends Actor{
         this.ws = ws
         this.conn = conn
         this.cursors = {}
-        this.userId = 'miguel'
-        this.roles = ['A', 'B']
+        this.userId = null
+        this.roles = null
     }
     async_notify(msg, done){
         msg = JSON.parse(msg)
@@ -24,6 +26,7 @@ class Controller extends Actor{
             return
         }
         msg.args = decodeDates(msg.args, msg.dates)
+        /* offline
         if(msg.type == 'login'){
             this.userId = msg.args[0]
             if(msg.args[1] == 0){
@@ -32,13 +35,15 @@ class Controller extends Actor{
             done()
         }
         else if(msg.ticket > loginLastTicket[this.userId]){
-            if (msg.type == 'subscribe') {
-                this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
-            }else if (msg.type == 'unsubscribe') {
-                this.handle_unsubscribe(msg.ticket, done)
-            }else{
-                this.handle_rpc(msg.type, msg.args, msg.ticket, done)
-            }
+        */
+        if (msg.type == 'subscribe') {
+            this.handle_subscribe(msg.args[0], msg.args.slice(1), msg.ticket, done)
+        }else if (msg.type == 'unsubscribe') {
+            this.handle_unsubscribe(msg.ticket, done)
+        }else{
+            this.handle_rpc(msg.type, msg.args, msg.ticket, done)
+        }
+        /* offline
         }else{
             let ret = {ticket: msg.ticket, type: 'rpc'}
             ret.dates = []
@@ -46,20 +51,20 @@ class Controller extends Actor{
             this.ws.send(JSON.stringify(ret))
             done()
         }
+        */
     }
     handle_rpc(command, args, ticket, done){
         console.log('handle rpc', ticket)
         let ret = {ticket: ticket, type: 'rpc'}
         if(this['rpc_' + command]) {
-            console.log('dentro')
             return Q(this['rpc_' + command](...args)).then((val) => {
-                console.log('val', val)
                 let {path, obj} = encodeDates(val)
                 ret.dates = path
                 ret.data = obj
-                console.log('send rpc reponse', ret)
                 this.ws.send(JSON.stringify(ret))
+                /* offline
                 loginLastTicket[this.userId] = ticket
+                */
                 done()
             }).catch((err)=>{
                 done()
@@ -75,9 +80,9 @@ class Controller extends Actor{
             this.cursors[ticket].close()
             delete this.cursors[ticket]
         }
+        /* offline
         loginLastTicket[this.userId] = ticket
-        //Controller.lastTicket = ticket
-        console.log('done')
+        */
         done()
     }
 
@@ -85,11 +90,8 @@ class Controller extends Actor{
         console.log('subscribe', predicate, args, ticket)
         args = args || []
         let ret = {ticket: ticket, type: 'subscribe'}
-        //let pred = this['subs_' + predicate](...args)
         this['subs_' + predicate] && Q(this['subs_' + predicate](...args)).then((pred)=> {
-            console.log('pred:', pred)
             pred && pred.changes({includeInitial: true, includeStates: true}).run(this.conn, (err, cursor) => {
-                console.log('dentro de pred')
                 this.cursors[ticket] = cursor
                 cursor.each((err, data) => {
                         if (err) {
@@ -118,10 +120,8 @@ class Controller extends Actor{
                                     delete data.new_val
                                 }
                                 ret.type = type
-                                //ret.data = data
                                 ret.predicate = predicate
                                 console.log('feed')
-                                //ret.dates = encodeDates(data)
                                 let {path, obj} = encodeDates(data)
                                 ret.dates = path
                                 ret.data = obj
@@ -130,11 +130,10 @@ class Controller extends Actor{
                         }
                     }
                 )
+                /* offline
                 loginLastTicket[this.userId] = ticket
-                //Controller.lastTicket = ticket
-                console.log('done')
+                */
                 done()
-                // cursor.on('data', (change) => {ret.data=change; this.ws.send(JSON.stringify(ret))})
             })
         })
     }
@@ -153,7 +152,9 @@ class Controller extends Actor{
             if(can) {
                 doc = this.beforeAdd(collection, doc)
                 return this.add(collection, doc).then((doc) => {
+                    /* offline
                     loginLastGeneratedId[this.userId] = doc.generated_keys[0]
+                    */
                     return doc.generated_keys[0]
                 })
             }else{
@@ -223,7 +224,7 @@ class Controller extends Actor{
         }).then((can)=>{
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
-                return this.check(collection, newDoc) && this.can('insert', collection, newDoc)
+                return this.check(collection, newDoc) && this.can('add', collection, newDoc)
             }else{
                 return false
             }
@@ -231,7 +232,6 @@ class Controller extends Actor{
             if(can){
                 doc = this.beforeUpdate(collection, doc)
                 this.update(collection, id, doc).then((doc)=>{
-                    console.log('replaced', doc)
                     return doc.replaced
                 })
             }else{
@@ -261,23 +261,23 @@ class Controller extends Actor{
         })
     }
 
+    rpc_login(name){
+        this.userId = name
+        this.roles = ['A', 'B']
+        return this.roles
+    }
+
     get(collection, id){
         console.log('get', collection, id)
         return r.table(collection).get(id).run(this.conn)
-        /*if(callback) {
-            r.table(collection).get(id).run(this.conn).then((doc) => callback(doc))
-        }
-        else {
-            return r.table(collection).get(id).run(this.conn) // return ?
-        }
-        */
     }
 
     close(){
         for(let c of Object.values(this.cursors)){
             c.close()
         }
-        console.log('close')}
+        console.log('close')
+    }
 }
 
 module.exports.Controller = Controller

@@ -1,7 +1,7 @@
 import {ws} from 'lince/client/webSocketActor.js'
 import _ from 'lodash'
 import {dispatcher} from 'lince/client/dispatcherActor.js'
-import {status, ready} from 'lince/client/status.js'
+import {status} from 'lince/client/status.js'
 
 <notifications>
     <div class="notification-bar">

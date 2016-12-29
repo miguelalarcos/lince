@@ -3,9 +3,9 @@ import _ from 'lodash'
 import Actor from '../lib/Actor.js'
 import {encodeDates, decodeDates} from '../lib/encodeDate'
 import {status, ready} from './status'
-import {localStorageShiftAndReplacePending, localStorageGetFirstPending,
-        localStoragePushPending, localStorageGetPending} from '../lib/localStorageUtil'
-import Q from 'q'
+//import {localStorageShiftAndReplacePending, localStorageGetFirstPending,
+//        localStoragePushPending, localStorageGetPending} from '../lib/localStorageUtil'
+//import Q from 'q'
 
 class WebSocketActor extends Actor{
 
@@ -17,32 +17,18 @@ class WebSocketActor extends Actor{
         this.dispatcher = null
         this.ws = null
         this.offline = null
+        /* offline
         this.promises = {}
-        //this.mapTicketId = {}
-
-        //this.pending = []
-        //if(!localStorage.pending) {
-        //    localStorage.pending = JSON.stringify([])
-        //}
-        status.observe((ch)=>{
-            if(ch.newValue == 'logged'){
-                this.sendPending()
-            }
-        })
-
-        //for(let p of localStorageGetPending()) {
-        //    this.offline.tell('send', {type: p.type, args: p.args, ticket: p.ticket})
-        //}
-
-        //this.connect()
+        */
     }
 
     start(){
+        /* offline
         for(let {type, args, ticket} of localStorageGetPending()) {
             this.offline.tell('send', {type, args, ticket})
         }
-
-        //this.connect()
+        */
+        this.connect()
     }
 
     connect(){
@@ -74,11 +60,13 @@ class WebSocketActor extends Actor{
         let obj = JSON.parse(msg)
         obj.data = decodeDates(obj.data, obj.dates)
 
+        /* offline
         let promise = this.promises[obj.ticket]
         if(promise){
             promise.resolve(obj.data)
             delete this.promises[obj.ticket]
         }
+        */
         this.dispatch(obj)
     }
 
@@ -93,11 +81,14 @@ class WebSocketActor extends Actor{
     }
 
     open(){
+        /* offline
         this.offline.clear()
+        */
         status.set('connected')
-        this.tell('sendPending')
+        //this.tell('sendPending')
     }
 
+    /* offline
     sendPending(){
         let p = localStorageGetFirstPending()
         if(p) {
@@ -114,8 +105,10 @@ class WebSocketActor extends Actor{
             this.emit('ready')
         }
     }
+    */
 
     send(type, args, ticket){
+        /* offline
         if(_.includes(['add', 'update', 'delete'], type)) {
             localStoragePushPending({type, args, ticket})
             let deferred = Q.defer()
@@ -124,12 +117,15 @@ class WebSocketActor extends Actor{
                 localStorageShift()
             })
         }
+        */
         if(ready.get()) {
             let {path, obj} = encodeDates(args)
             console.log('send', JSON.stringify({type, args: obj, ticket, dates: path}))
             this.ws.send(JSON.stringify({type, args: obj, ticket, dates: path}))
         }else{
+            /* offline
             this.offline.tell('send', {type, args, ticket})
+            */
         }
     }
 }

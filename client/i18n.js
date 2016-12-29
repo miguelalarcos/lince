@@ -1,12 +1,12 @@
 import {observable, autorun} from 'mobx'
-import {ready} from './status'
+import {status} from './status'
 
 export const i18nMixin = (self) => {
     return {
         language: observable('es'),
         i18nResource: {},
         i18nInit: () => autorun(()=>{
-            ready.get()
+            status.get()
             self.dispatcher.ask('rpc', 'getLanguage', self.language.get()).then((resource)=> {
                 self.i18nResource = resource
                 self.update()
