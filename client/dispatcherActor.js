@@ -43,6 +43,7 @@ class DispatcherActor extends Actor{
         this.ask('rpc', 'login', name).then((roles)=>{
             if(roles){
                 this.roles = roles
+                this.userId = name
                 status.set('logged')
             }
         })
