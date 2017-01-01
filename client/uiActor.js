@@ -116,7 +116,7 @@ export const UImixin = (self) => {
     },
     index: (doc) => {
         let items = [doc, ...self.items]
-        _.orderBy(items, self.orderBy[0], self.orderBy[1])
+        items = _.orderBy(items, self.orderBy[0], self.orderBy[1])
         return self.actualIndex(doc, items)
 
     },

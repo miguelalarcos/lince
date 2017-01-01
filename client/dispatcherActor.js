@@ -27,8 +27,16 @@ class DispatcherActor extends Actor{
         this.rv.set('rpc', msg.data)
     }
 
+    add(collection, doc){
+        return this.ask('rpc', 'add', collection, doc)
+    }
+
     update(collection, id, doc){
         return this.ask('rpc', 'update', collection, id, doc)
+    }
+
+    delete(collection, id){
+        return this.ask('rpc', 'delete', collection, id)
     }
 
     login(name){

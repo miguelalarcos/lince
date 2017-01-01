@@ -148,7 +148,11 @@ class Controller extends Actor{
 
     rpc_add(collection, doc){
         delete doc.id
-        return this.check(collection, doc) && this.can('add', collection, doc).then((can)=>{
+        delete doc.userId
+        if(!this.check(collection, doc)){
+            return Q(0)
+        }
+        return this.can('add', collection, doc).then((can)=>{
             if(can) {
                 doc = this.beforeAdd(collection, doc)
                 return this.add(collection, doc).then((doc) => {
@@ -217,6 +221,7 @@ class Controller extends Actor{
 
     rpc_update(collection, id, doc){
         delete doc.id
+        delete doc.userId
         let oldDoc
         return this.get(collection, id).then((old)=>{
             oldDoc = old
@@ -224,7 +229,10 @@ class Controller extends Actor{
         }).then((can)=>{
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
-                return this.check(collection, newDoc) && this.can('add', collection, newDoc)
+                if(!this.check(collection, newDoc)){
+                    return Q(false)
+                }
+                return this.can('add', collection, newDoc)
             }else{
                 return false
             }
