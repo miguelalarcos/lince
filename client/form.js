@@ -21,7 +21,7 @@ export const FormMixin = (self) => {
                 doc = self.beforeUpdate(doc)
                 return self.dispatcher.ask('rpc', 'update', self.collection, id, doc).then(()=>{
                     self.enabled=true
-                    //self.afterSave()
+                    self.dirty = false
                     return null
                     //self.update()
                 })
@@ -29,9 +29,9 @@ export const FormMixin = (self) => {
                 doc = self.beforeAdd(doc)
                 return self.dispatcher.ask('rpc', 'add', self.collection, doc).then((id)=>{
                     self.doc.set('id', id)
+                    self.opts.rv.set(id)
                     self.dirty = false
                     self.enabled = true
-                    //self.afterSave()
                     return id
                     //self.update()
                 })
@@ -55,17 +55,22 @@ export const FormMixin = (self) => {
             self.doc.observe((ch)=>{
                 self.dirty=true
                 let name = ch.name
-                let msg = validation[name](ch.newValue)
+                if(validation[name]) {
+                    let msg = validation[name](ch.newValue)
 
-                if(msg == ''){
-                    self.validFlags[name] = true
+                    if (msg == '') {
+                        self.validFlags[name] = true
+                    }
+                    else {
+                        self.validFlags[name] = false
+                    }
+                    self['error_message_' + name] = msg
                 }
                 else{
-                    self.validFlags[name] = false
+                    self.validFlags[name] = true
                 }
-                self['error_message_' + name] = msg
-                //self.enabled = _.every(self.validFlags, (val) => val)
-                self.enabled = true
+                //self.enabled = true
+                self.enabled = _.every(self.validFlags)
                 self.update()
             })
             self.clear()
