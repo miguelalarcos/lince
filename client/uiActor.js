@@ -40,22 +40,9 @@ export const UImixin = (self) => {
     dispatcher: ui.dispatcher,
     dispose: {},
     mapIdTicket: {},
-    subscribeDoc: (collection, rv) => {
-      mbox.autorun(()=>{
-          self.id = rv.get()
-          self.doc = ui.store.collections[collection].get(self.id)
-          self.update()
-      })
-      ui.store.collections[collection].observe((ch)=>{
-          if(ch.newValue.id == self.id){
-              self.doc = ch.newValue
-              self.update()
-          }
-      })
-    },
     subscribe: (id, predicate, args) => {
-      console.log(ready.get())
       if(ready.get()) {
+          console.log('ready subscribe')
           ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
               //logged.get()
               self.mapIdTicket[id] = ticket

@@ -102,12 +102,16 @@ import 'lince/client/inputs.tag'
 Server side you write code like:
 
 ```javascript
-const Q = require('q')
 const Controller = require('lince/server/ServerController').Controller
 const start = require('lince/server/ServerActor').start
 const validateItem = require('../validation/validateItem').validateItem
 
 class MyServer extends Controller{
+
+    setUp(){
+        this.permission('todos').canUpdate = (doc) => this.userId == doc.userId
+        this.permission('todos').canAdd = (doc) => this.userId != null
+    }
 
     subs_todos(filter){
         if(filter == 'ALL'){
@@ -126,15 +130,6 @@ class MyServer extends Controller{
     beforeAdd(collection, doc){
         doc.userId = this.userId
         return doc
-    }
-
-    can(type, collection, doc){
-        if(this.userId) {
-            return true
-        }
-        else{
-            return super.call(type, collection, doc)
-        }
     }
 
     check(collection, doc){

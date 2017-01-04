@@ -42,7 +42,7 @@ class collectionStoreActor extends Actor{
         console.log('subscribe', id, predicate)
         let ticket = T.getTicket(predicate, args)
         //this.filters[ticket] = filter(...args) // creo que se puede qiutar
-        this.ticketsCollection[ticket] = this.registered[predicate]
+        this.ticketsCollection[ticket] = this.registered[predicate] // se puede quitar?
         if (!this.collections[ticket]) {
             this.collections[ticket] = observable(asMap([], asReference))
         }
@@ -57,7 +57,6 @@ class collectionStoreActor extends Actor{
         }
         this.subsId[id] = ticket
         args.unshift(predicate)
-        console.log('send subscribe')
         this.ws.tell('send', 'subscribe', args, ticket)
     }
 

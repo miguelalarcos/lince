@@ -18,7 +18,14 @@ class Controller extends Actor{
         this.cursors = {}
         this.userId = null
         this.roles = null
+        this.permissions = {}
+        this.setUp()
     }
+
+    setUp(){
+
+    }
+
     async_notify(msg, done){
         msg = JSON.parse(msg)
         if(!_.isArray(msg.args) || !_.isArray(msg.dates) || !_.isString(msg.type) || !_.isInteger(msg.ticket)){
@@ -152,19 +159,20 @@ class Controller extends Actor{
         if(!this.check(collection, doc)){
             return Q(0)
         }
-        return this.can('add', collection, doc).then((can)=>{
-            if(can) {
-                doc = this.beforeAdd(collection, doc)
-                return this.add(collection, doc).then((doc) => {
-                    /* offline
-                    loginLastGeneratedId[this.userId] = doc.generated_keys[0]
-                    */
-                    return doc.generated_keys[0]
-                })
-            }else{
-                return 0
-            }
-        })
+        let can = this.can('canAdd', collection, doc) //this.permissions[collection] && this.permissions[collection].canAdd(doc)
+        //return this.can('add', collection, doc).then((can)=>{
+        if(can) {
+            doc = this.beforeAdd(collection, doc)
+            return this.add(collection, doc).then((doc) => {
+                /* offline
+                loginLastGeneratedId[this.userId] = doc.generated_keys[0]
+                */
+                return doc.generated_keys[0]
+            })
+        }else{
+            return Q(0)
+        }
+        //})
     }
 
     hasRole(role){
@@ -191,7 +199,7 @@ class Controller extends Actor{
         return r.table('rules').filter({type, collection}).toArray()
     }
 
-    can(type, collection, doc){
+    _can(type, collection, doc){
         let can = false
         return this.getRules(type, collection).then((results)=>{
             for(let r of results){
@@ -205,6 +213,33 @@ class Controller extends Actor{
             }
             return can
         })
+    }
+
+    can(type, collection, doc){
+        let p = this.permissions[collection]
+        if(p){
+            p = p[type]
+            return p(doc)
+        }
+        else{
+            return false
+        }
+    }
+
+    permission(collection){
+        let default_ = {
+            canAdd: (doc) => false,
+            canUpdate: (doc) => false,
+            canDelete: (doc) => false
+        }
+        let p = this.permissions[collection]
+        if(p){
+            return p
+        }
+        else{
+            this.permissions[collection] = default_
+            return default_
+        }
     }
 
     beforeAdd(collection, doc){
@@ -225,21 +260,23 @@ class Controller extends Actor{
         let oldDoc
         return this.get(collection, id).then((old)=>{
             oldDoc = old
-            return this.can('update', collection, oldDoc)
-        }).then((can)=>{
+            let can = this.can('canUpdate', collection, oldDoc) //this.permissions[collection] && this.permissions[collection].canUpdate(oldDoc)
+            //return this.can('update', collection, oldDoc)
+        //}).then((can)=>{
             if(can) {
                 let newDoc = Object.assign({}, oldDoc, doc)
                 if(!this.check(collection, newDoc)){
-                    return Q(false)
+                    return 0
                 }
-                return this.can('add', collection, newDoc)
+                can = this.can('canAdd', collection, newDoc) //this.permissions[collection].canAdd(newDoc)
+                //return this.can('add', collection, newDoc)
             }else{
-                return false
+                return 0
             }
-        }).then((can)=>{
+        //}).then((can)=>{
             if(can){
                 doc = this.beforeUpdate(collection, doc)
-                this.update(collection, id, doc).then((doc)=>{
+                return this.update(collection, id, doc).then((doc)=>{
                     return doc.replaced
                 })
             }else{
@@ -256,16 +293,18 @@ class Controller extends Actor{
     }
 
     rpc_delete(collection, id){
-        this.get(collection, id).then((oldDoc)=>{
-            return this.can('delete', collection, oldDoc)
-        }).then((can)=>{
-            if(can){
-                this.delete(collection, id).then((doc)=>{
+        this.get(collection, id).then((oldDoc)=> {
+            let can = can = this.can('canDelete', collection, oldDoc)// this.permissions[collection] && this.permissions[collection].canDelete(oldDoc)
+            //    return this.can('delete', collection, oldDoc)
+            //}).then((can)=>{
+            if (can) {
+                return this.delete(collection, id).then((doc) => {
                     return doc.deleted
                 })
-            }else{
+            } else {
                 return 0
             }
+            //})
         })
     }
 
