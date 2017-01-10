@@ -27,6 +27,10 @@ class DispatcherActor extends Actor{
         this.rv.set('rpc', msg.data)
     }
 
+    remote(method, ...args){
+        return this.ask('rpc', method, ...args)
+    }
+
     add(collection, doc){
         return this.ask('rpc', 'add', collection, doc)
     }

@@ -294,7 +294,7 @@ class Controller extends Actor{
 
     rpc_delete(collection, id){
         this.get(collection, id).then((oldDoc)=> {
-            let can = can = this.can('canDelete', collection, oldDoc)// this.permissions[collection] && this.permissions[collection].canDelete(oldDoc)
+            let can = this.can('canDelete', collection, oldDoc)// this.permissions[collection] && this.permissions[collection].canDelete(oldDoc)
             //    return this.can('delete', collection, oldDoc)
             //}).then((can)=>{
             if (can) {
