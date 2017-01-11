@@ -38,11 +38,10 @@ export const UImixin = (self) => {
   return {
     store: ui.store,
     dispatcher: ui.dispatcher,
-    dispose: {},
+    dispose: null,
     mapIdTicket: {},
     subscribe: (id, predicate, args) => {
       if(ready.get()) {
-          console.log('ready subscribe')
           ui.store.ask('subscribe', id, predicate, args).then(({ticket, collection}) => {
               //logged.get()
               self.mapIdTicket[id] = ticket
@@ -64,8 +63,10 @@ export const UImixin = (self) => {
     handle: (ticket, collection) => {
       self.items = _.orderBy(collection.values(), self.orderBy[0], self.orderBy[1])
       self.update()
-      //self.dispose[ticket] =
-      collection.observe((change) => { // TODO: no estoy haciendo disponse
+      if(self.dispose){
+          self.dispose()
+      }
+      self.dispose = collection.observe((change) => {
         self.updateItems(change)
         self.update()
       })
@@ -103,6 +104,7 @@ export const UImixin = (self) => {
     },
     index: (doc) => {
         let items = [doc, ...self.items]
+        console.log('items', items)
         items = _.orderBy(items, self.orderBy[0], self.orderBy[1])
         return self.actualIndex(doc, items)
 

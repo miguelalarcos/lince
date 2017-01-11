@@ -128,10 +128,10 @@ class Controller extends Actor{
                                 }
                                 ret.type = type
                                 ret.predicate = predicate
-                                console.log('feed')
                                 let {path, obj} = encodeDates(data)
                                 ret.dates = path
                                 ret.data = obj
+                                console.log('feed', ret)
                                 this.ws.send(JSON.stringify(ret))
                             }
                         }

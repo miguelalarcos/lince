@@ -50,7 +50,8 @@ class collectionStoreActor extends Actor{
         //let name = this.registered[predicate]
         let collection = this.collections[ticket]
         promise.resolve({ticket, collection})
-        if (this.subsId[id]) {
+
+        if (this.subsId[id] != null && this.subsId[id] != undefined) {
             delete this.collections[this.subsId[id]]
             this.ws.tell('send', 'unsubscribe', [], this.subsId[id])
             this.activeTickets.delete(this.subsId[id])
