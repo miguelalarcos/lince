@@ -1,5 +1,7 @@
 import Actor from '../lib/Actor.js'
 import {store} from './collectionStoreActor'
+import {localStorageAddPending, localStorageUpdatePending, localStorageDeletePending} from '../lib/localStorageUtil'
+import uuid4 from 'uuid/v4'
 
 class OfflineActor extends Actor{
 
@@ -87,6 +89,7 @@ class OfflineActor extends Actor{
                 id = obj.args[1]
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
                 this.handle('delete', {id}, collection)
+                localStorageDeletePending(id)
                 break
             case 'update':
                 id = obj.args[1]
@@ -94,12 +97,15 @@ class OfflineActor extends Actor{
                 doc.id = id
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: obj.ticket})
                 this.handle('update', doc, collection)
+                localStorageUpdatePending(id, doc)
                 break
             case 'add':
                 let ret = {type: obj.type, ticket: obj.ticket, data: obj.args[1]}
-                ret.data.id = ':' + obj.ticket
+                //ret.data.id = ':' + obj.ticket //uuid
+                ret.data.id = uuid4()
                 this.ws.tell('dispatch', {type: 'rpc', data: 1, ticket: ret.ticket})
                 this.handle('add', ret.data, collection)
+                localStorageAddPending(collection, ret.data)
                 break
         }
     }

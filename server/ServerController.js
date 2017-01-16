@@ -4,6 +4,7 @@ const Actor = require('../lib/Actor.js')
 const encodeDates = require('../lib/encodeDateServer').encodeDates
 const decodeDates = require('../lib/encodeDateServer').decodeDates
 const _ = require('lodash')
+const bcrypt = require('bcryptjs')
 
 /* offline
 let loginLastTicket = {'miguel': -1}
@@ -175,6 +176,18 @@ class Controller extends Actor{
         //})
     }
 
+    rpc_offline_add(collection, doc){
+        let uuid = doc.id
+        return r.table(collection).filter({_secondary: uuid}).count().run(this.conn).then((count)=>{
+            if(count == 0){
+                return this.rpc_add(collection, doc)
+            }else{
+                return 0
+            }
+        })
+    }
+
+/*
     hasRole(role){
         return _.includes(this.roles, role)
     }
@@ -214,6 +227,7 @@ class Controller extends Actor{
             return can
         })
     }
+*/
 
     can(type, collection, doc){
         let p = this.permissions[collection]
@@ -293,6 +307,7 @@ class Controller extends Actor{
     }
 
     rpc_delete(collection, id){
+        //return TODO
         this.get(collection, id).then((oldDoc)=> {
             let can = this.can('canDelete', collection, oldDoc)// this.permissions[collection] && this.permissions[collection].canDelete(oldDoc)
             //    return this.can('delete', collection, oldDoc)
@@ -308,14 +323,43 @@ class Controller extends Actor{
         })
     }
 
-    rpc_login(name){
-        this.userId = name
-        this.roles = ['A', 'B']
-        return this.roles
+    rpc_login(email, password) {
+        return r.table('user').filter({email: email}).run(this.conn).then((cursor) => {
+            return cursor.toArray()
+        }).then((users) => {
+            let user = users[0]
+            return bcrypt.compare(password, user.password)
+        }).then((res) => {
+            if (res) {
+                this.userId = email
+                this.roles = []
+                return this.roles
+            }
+            else {
+                return false
+            }
+        })
+    }
+
+    rpc_createUser(email, password){
+        return r.table('user').filter({email: email}).count().run(this.conn).then((count)=> {
+            if(count == 0){
+                return bcrypt.hash(password, 10)
+            }else{
+                return false
+            }
+        }).then((hash)=>{
+            if(hash == false){
+                return false
+            }
+            else{
+                r.table('user').insert({emai: email, password: hash, roles: []}).run(this.conn)
+                return []
+            }
+        })
     }
 
     get(collection, id){
-        console.log('get', collection, id)
         return r.table(collection).get(id).run(this.conn)
     }
 

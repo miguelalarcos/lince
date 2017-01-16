@@ -1,11 +1,12 @@
-import {localStorageGetPending} from '../lib/localStorageUtil'
-import _ from 'lodash'
+//import {localStorageGetPending} from '../lib/localStorageUtil'
+//import _ from 'lodash'
 
 class Ticket{
     constructor(){
-        let pending = localStorageGetPending()
-        let last = _.last(pending)
-        this.ticket = last && (last.ticket +1) || 0
+        //let pending = localStorageGetPending()
+        //let last = _.last(pending)
+        //this.ticket = last && (last.ticket +1) || 0
+        this.ticket = 0
     }
 
     getTicket(){
